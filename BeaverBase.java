@@ -63,7 +63,7 @@ public class BeaverBase {
      */
     public static void splashScreen() {
             System.out.println(line("-",80));
-    System.out.println("Welcome to BeaverBaseLite"); // Display the string.
+    System.out.println("Welcome to BeaverBaseLite ~|=|>"); // Display the string.
             System.out.println("BeaverBaseLite Version " + getVersion());
             System.out.println(getCopyright());
             System.out.println("\nType \"help;\" to display supported commands.");
@@ -153,6 +153,9 @@ public class BeaverBase {
                 break;
             case "install":
                 initializeDataStore();
+                break;
+            case "insert":
+                parseInsert(userCommand);
                 break;
             case "exit":
                 isExit = true;
@@ -288,8 +291,8 @@ public class BeaverBase {
      *  @param queryString is a String of the user input
      */
     public static void parseQuery(String queryString) {
-            System.out.println("STUB: This is the parseQuery method");
-            System.out.println("\tParsing the string:\"" + queryString + "\"");
+        System.out.println("\tParsing the string:\"" + queryString + "\"");
+
     }
 
     /**
@@ -301,9 +304,61 @@ public class BeaverBase {
             System.out.println("Parsing the string:\"" + updateString + "\"");
     }
 
-    public static long toHex(String arg) {
-        return Long.parseLong(String.format("%x", new BigInteger(1, arg.getBytes())), 16);
-//                return String.format("%x", new BigInteger(1, arg.getBytes()));
+    /*insert into table*/
+    public static void parseInsert(String insertString) {
+
+        ArrayList<String> columnList = new ArrayList<>();
+        ArrayList<String> valueList = new ArrayList<>();
+
+        /*parse table name*/
+        ArrayList<String> initialInsertTokens = new ArrayList<>(Arrays.asList(insertString.split("\\(")));
+        ArrayList<String> leftInsertTokens = new ArrayList<>(Arrays.asList(initialInsertTokens.get(1).split(" ")));
+        ArrayList<String> rightInsertTokens = new ArrayList<>(Arrays.asList(initialInsertTokens.get(2).split(" ")));
+
+        String tableName = leftInsertTokens.get(leftInsertTokens.size()-1);
+
+        for (int i = 0; i < leftInsertTokens.size()-1; i++)
+            columnList.add(leftInsertTokens.get(i).replace(",", "").replace(")", ""));
+
+        for (int i = 0; i < rightInsertTokens.size(); i++)
+            valueList.add(rightInsertTokens.get(i).replace(",", "").replace(")", ""));
+
+        System.out.println("columnList = " + columnList.toString());
+        System.out.println("valuelist = " + valueList.toString());
+
+        /*retrieve table information about columns*/
+        ArrayList<String> columnListActual = getTableInformation(tableName, "columnList");
+        System.out.println("columnListActual = " + columnListActual.toString());
+        ArrayList<String> notNullList = getTableInformation(tableName, "nullList");
+        System.out.println("notNullList = " + notNullList.toString());
+        ArrayList<String> dataTypeList = getTableInformation(tableName, "dataTypeList");
+        System.out.println("dataTypeList = " + dataTypeList.toString());
+        ArrayList<String> ordinalPositionList = getTableInformation(tableName, "ordinalPositionList");
+        System.out.println("ordinalPositionList = " + ordinalPositionList);
+
+        /*ensure columns and null properties match*/
+        if(columnList.size() != columnListActual.size())
+            System.out.println("Incorrect number of columns supplied.");
+        if(valueList.size() != columnListActual.size())
+            System.out.println("Incorrect number of values supplied.");
+
+        /*reorder columnList and valueList to match ordinal positions*/
+        ArrayList<String> orderedValueList = new ArrayList<>();
+        for (int i = 0; i < columnListActual.size(); i++) {
+            for (int j = 0; j < columnList.size(); j++) {
+                if (columnList.get(j).equals(columnListActual.get(i))) {
+                    orderedValueList.add(valueList.get(j));
+                }
+            }
+        }
+        System.out.println("orderedValueList = " + orderedValueList.toString());
+        System.out.println("");
+
+        /*connect to correct table page*/
+
+        /*write data*/
+
+
     }
 
     /*show tables*/
@@ -351,7 +406,7 @@ public class BeaverBase {
     /*create new table*/
     public static void parseCreateTable(String createTableString) {
 
-        ArrayList<String> createTableTokens = new ArrayList<String>(Arrays.asList(createTableString.split(" ")));
+        ArrayList<String> createTableTokens = new ArrayList<>(Arrays.asList(createTableString.split(" ")));
 
         String tableName = createTableTokens.get(1);
 
@@ -362,13 +417,12 @@ public class BeaverBase {
         /*1) Parse the COL_NAMES and DATA_TYPES from the createTableTokens Variable*/
         int payloadSize = 0; //number of bytes in the payload
         int numColumns = 0;
-        ArrayList<Integer> recordPayloadHeader = new ArrayList<Integer>();
-        ArrayList<Integer> recordPayloadContent = new ArrayList<Integer>();
-        ArrayList<String> columnList = new ArrayList<String>();
-        ArrayList<String> columnDataTypeList = new ArrayList<String>();
-        ArrayList<String> isNullableList = new ArrayList<String>();
-
-        ArrayList<Integer> dataTypeList = new ArrayList<Integer>();
+        ArrayList<Integer> recordPayloadHeader = new ArrayList<>();
+        ArrayList<Integer> recordPayloadContent = new ArrayList<>();
+        ArrayList<String> columnList = new ArrayList<>();
+        ArrayList<String> columnDataTypeList = new ArrayList<>();
+        ArrayList<String> isNullableList = new ArrayList<>();
+        ArrayList<Integer> dataTypeList = new ArrayList<>();
         String columnName;
 
         for (int i = 0; i < createTableTokens.size()-1; i++) {
@@ -736,8 +790,6 @@ public class BeaverBase {
         catch(Exception e) {
             System.out.println(e);
         }
-
-
 }
 
     /*get most recent rowId -- only necessary for catalog .tbl files*/
@@ -767,4 +819,108 @@ public class BeaverBase {
 
         return rowId;
     }
+
+    /*get table information from beaverbase_columns. requests can be dataTypeList, columnList, nullList, ordinalPositionList*/
+    public static ArrayList<String>  getTableInformation(String tableName, String request){
+        ArrayList<String> nullList = new ArrayList<>();
+        ArrayList<String> dataTypeList = new ArrayList<>();
+        ArrayList<String> columnList = new ArrayList<>();
+        ArrayList<String> ordinalPositionList = new ArrayList<>();
+
+        //System.out.println("tableName = " + tableName);
+        try{
+            RandomAccessFile table = new RandomAccessFile("data/catalog/beaverbase_columns.tbl", "rw");
+            table.seek(1);
+            int recordCount = table.read();
+            //System.out.println("recordCount = " + recordCount);
+
+            /*loop through the records in the beaverbase_columnspage (linearly)*/
+            for (int i = 1; i < recordCount-1; i++) {
+
+                /*find location of next record, read it*/
+                table.seek(8+((i-1)*2));
+                int recordLocation = table.readShort();
+                //System.out.println("recordLocation = " + recordLocation);
+
+                /*locate, read, and save values of column types*/
+                table.seek(recordLocation+5); //table name
+                int tableNameLength = table.readByte()-0xC;
+                //System.out.println("tableNameLength = " + tableNameLength);
+                int columnNameLength = table.readByte()-0xC;
+                //System.out.println("columnNameLength = " + columnNameLength);
+                int dataTypeLength = table.readByte()-0xC;
+                //System.out.println("dataTypeLength = " + dataTypeLength);
+                int ordinalPositionType = table.readByte();
+                //System.out.println("ordinalPositionType = " + ordinalPositionType);
+                int isNullableLength = table.readByte()-0xC;
+                //System.out.println("isNullableLength = " + isNullableLength);
+
+                /*read table name associated with this column*/
+                byte[] readTableName = new byte[tableNameLength];
+                table.read(readTableName);
+                String readTableNameString = new String(readTableName);
+                //System.out.println("readTableNameString = " + readTableNameString);
+
+                /*check if table name is same as table for which we are looking*/
+                //System.out.println(tableName.equals(readTableNameString));
+                if (tableName.equals(readTableNameString)){
+                    /*if it matches, add everything to the data arrayLists*/
+
+                    /*column name*/
+                    byte[] readColumnName = new byte[columnNameLength];
+                    table.read(readColumnName);
+                    String columnName = new String(readColumnName);
+                    //System.out.println("columnName = " + columnName);
+
+                    /*data type*/
+                    byte[] readDataType = new byte[dataTypeLength];
+                    table.read(readDataType);
+                    String dataType = new String(readDataType);
+                    //System.out.println("dataType = " + dataType);
+
+                    /*ordinal position*/
+                    int ordinalPosition = table.readByte();
+                    //System.out.println("ordinalPosition = " + ordinalPosition);
+
+                    /*is nullable*/
+                    byte[] readIsNullable = new byte[isNullableLength];
+                    table.read(readIsNullable);
+                    String isNullable = new String(readIsNullable);
+                    //System.out.println("isNullable = " + isNullable);
+
+                    /*make sure that each of our lists are big enough*/
+                    while(ordinalPosition > nullList.size()){
+                        nullList.add(null);
+                        dataTypeList.add(null);
+                        columnList.add(null);
+                        ordinalPositionList.add(null);
+                    }
+
+                    /*save to array lists in ordinal positions*/
+                    dataTypeList.set(ordinalPosition-1, dataType);
+                    columnList.set(ordinalPosition-1, columnName);
+                    nullList.set(ordinalPosition-1, isNullable);
+                    ordinalPositionList.set(ordinalPosition-1, String.valueOf(ordinalPosition));
+                }
+            }
+            table.close();
+        }
+        catch(IOException e) {
+            System.out.println(e);
+        }
+        switch (request) {
+            case "dataTypeList":
+                return dataTypeList;
+            case "columnList":
+                return columnList;
+            case "nullList":
+                return nullList;
+            case "ordinalPositionList":
+                return ordinalPositionList;
+            default:
+                System.out.println("You have entered an invalid request: \"" + request + "\"");
+        }
+        return null;
+    }
+
 }

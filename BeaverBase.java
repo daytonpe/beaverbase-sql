@@ -130,19 +130,15 @@ public class BeaverBase {
 		*/
 		switch (commandTokens.get(0)) {
                     case "select":
-                        System.out.println("CASE: SELECT");
                         parseQuery(userCommand);
                         break;
                     case "drop":
-                        System.out.println("CASE: DROP");
                         dropTable(userCommand);
                         break;
                     case "create":
-                        System.out.println("CASE: CREATE");
                         parseCreateTable(userCommand);
                         break;
                     case "update":
-                        System.out.println("CASE: UPDATE");
                         parseUpdate(userCommand);
                         break;
                     case "show":
@@ -260,6 +256,8 @@ public class BeaverBase {
 			 * are no cells on this page */
 			beaverbaseColumnsCatalog.write(0x00);
 
+                        beaverbaseColumnsCatalog.writeShort((int) pageSize);
+
                         /*write placeholder FF FF FF FF for the Right Page*/
                         beaverbaseColumnsCatalog.write(0xFF);
                         beaverbaseColumnsCatalog.write(0xFF);
@@ -307,8 +305,9 @@ public class BeaverBase {
 //                return String.format("%x", new BigInteger(1, arg.getBytes()));
         }
 
+        /*show tables*/
         public static void showTables(){
-            System.out.println("rowid table_name\n" +"--------------------------");
+            System.out.println("\nrowid\ttable_name\n" +"--------------------------");
             try{
                 /*create access to tables file in catalog*/
                 //System.out.println("writing to beaverbase_tables.tbl");
@@ -321,14 +320,22 @@ public class BeaverBase {
                 for (int i = 1; i <= recordCount; i++) {
 
                     /*get location of next title*/
-                    beaverbase_tables.seek(8+((recordCount-1)*2));
-                    int titleLocation = beaverbase_tables.readShort();
+                    beaverbase_tables.seek(8+((i-1)*2));
+                    int recordLocation = beaverbase_tables.readShort();
 
                     /*get title length*/
-                    beaverbase_tables.seek(titleLocation+6);
+                    beaverbase_tables.seek(recordLocation+1);
+                    int tableNameLength = beaverbase_tables.readByte()-0xC;
+
+                    /*read and print the table name*/
+                    byte[] tableName = new byte[tableNameLength];
+                    beaverbase_tables.read(tableName);
+                    String tableNameString = new String(tableName);
+                    System.out.println(i+"\t"+tableNameString);
+
                 }
                 beaverbase_tables.close();
-
+                System.out.println("");
 
             }
             catch(Exception e) {
@@ -336,340 +343,395 @@ public class BeaverBase {
             }
         }
 
-	/**
-	 *  Stub method for creating new tables
-	 *  @param queryString is a String of the user input
-	 */
+	/*create new table*/
 	public static void parseCreateTable(String createTableString) {
 
-		System.out.println("STUB: Calling your method to create a table");
-		System.out.println("Parsing the string:\"" + createTableString + "\"");
-		ArrayList<String> createTableTokens = new ArrayList<String>(Arrays.asList(createTableString.split(" ")));
+            ArrayList<String> createTableTokens = new ArrayList<String>(Arrays.asList(createTableString.split(" ")));
 
-                String tableName = createTableTokens.get(1);
+            String tableName = createTableTokens.get(1);
 
-		/* Define table file name */
-		String tableFileName = "data/user_data/"+tableName + ".tbl";
+            /* Define table file name */
+            String tableFileName = "data/user_data/"+tableName + ".tbl";
 
 
-                /*1) Parse the COL_NAMES and DATA_TYPES from the createTableTokens Variable*/
-                int payloadSize = 0; //number of bytes in the payload
-                int numColumns = 0;
-                int rowId = 0;
-                ArrayList<Integer> recordPayloadHeader = new ArrayList<Integer>();
-                ArrayList<Integer> recordPayloadContent = new ArrayList<Integer>();
-                ArrayList<String> columnList = new ArrayList<String>();
-                ArrayList<String> isNullableList = new ArrayList<String>();
+            /*1) Parse the COL_NAMES and DATA_TYPES from the createTableTokens Variable*/
+            int payloadSize = 0; //number of bytes in the payload
+            int numColumns = 0;
+            ArrayList<Integer> recordPayloadHeader = new ArrayList<Integer>();
+            ArrayList<Integer> recordPayloadContent = new ArrayList<Integer>();
+            ArrayList<String> columnList = new ArrayList<String>();
+            ArrayList<String> columnDataTypeList = new ArrayList<String>();
+            ArrayList<String> isNullableList = new ArrayList<String>();
 
-                ArrayList<Integer> dataTypeList = new ArrayList<Integer>();
-                String columnName;
+            ArrayList<Integer> dataTypeList = new ArrayList<Integer>();
+            String columnName;
 
-                for (int i = 0; i < createTableTokens.size()-1; i++) {
+            for (int i = 0; i < createTableTokens.size()-1; i++) {
 
-                    boolean isNullable = (createTableTokens.get(i+1).replace(",", "").equals("not"));
+                boolean isNullable = (createTableTokens.get(i+1).replace(",", "").equals("not"));
 
-                    switch (createTableTokens.get(i).replace(",", "")) {
+                switch (createTableTokens.get(i).replace(",", "")) {
+                    case "tinyint":
+                        /*create column name list*/
+                        columnName = createTableTokens.get(i-1).replace(",", "");
+                        columnList.add(columnName);
+                        columnDataTypeList.add("TINYINT");
 
-                        case "tinyint":
-                            /*create column name list*/
-                            columnName = createTableTokens.get(i-1).replace(",", "");
-                            columnList.add(columnName);
+                        payloadSize+=1;
 
-                            payloadSize+=1;
+                        /*create is nullable list*/
+                        if (isNullable) {
+                            isNullableList.add("YES");
+                        }
+                        else{
+                            isNullableList.add("NO");
+                        }
 
-                            /*create is nullable list*/
-                            if (isNullable) {
-                                isNullableList.add("YES");
-                            }
-                            else{
-                                isNullableList.add("NO");
-                            }
+                        /*create data type list*/
+                        dataTypeList.add(0x04);
 
-                            /*create data type list*/
-                            dataTypeList.add(0x04);
+                        numColumns++;
+                        break;
 
-                            numColumns++;
-                            break;
+                    case "smallint":
+                        /*create column name list*/
+                        columnName = createTableTokens.get(i-1).replace(",", "");
+                        columnList.add(columnName);
+                        columnDataTypeList.add("SMALLINT");
 
-			case "smallint":
-                            /*create column name list*/
-                            columnName = createTableTokens.get(i-1).replace(",", "");
-                            columnList.add(columnName);
+                        payloadSize+=2;
 
-                            payloadSize+=2;
+                        /*create is nullable list*/
+                        if (isNullable) {
+                            isNullableList.add("YES");
+                        }
+                        else{
+                            isNullableList.add("NO");
+                        }
 
-                            /*create is nullable list*/
-                            if (isNullable) {
-                                isNullableList.add("YES");
-                            }
-                            else{
-                                isNullableList.add("NO");
-                            }
+                        /*create data type list*/
+                        dataTypeList.add(0x05);
 
-                            /*create data type list*/
-                            dataTypeList.add(0x05);
+                        numColumns++;
+                        break;
 
-                            numColumns++;
-                            break;
+                    case "int":
+                        /*create column name list*/
+                        columnName = createTableTokens.get(i-1).replace(",", "");
+                        columnList.add(columnName);
+                        columnDataTypeList.add("INT");
 
-			case "int":
-                            /*create column name list*/
-                            columnName = createTableTokens.get(i-1).replace(",", "");
-                            columnList.add(columnName);
+                        payloadSize+=4;
 
-                            payloadSize+=4;
+                        /*create is nullable list*/
+                        if (isNullable) {
+                            isNullableList.add("YES");
+                        }
+                        else{
+                            isNullableList.add("NO");
+                        }
 
-                            /*create is nullable list*/
-                            if (isNullable) {
-                                isNullableList.add("YES");
-                            }
-                            else{
-                                isNullableList.add("NO");
-                            }
+                        /*create data type list*/
+                        dataTypeList.add(0x06);
 
-                            /*create data type list*/
-                            dataTypeList.add(0x06);
+                        numColumns++;
+                        break;
 
-                            numColumns++;
-                            break;
+                    case "bigint":
+                        /*create column name list*/
+                        columnName = createTableTokens.get(i-1).replace(",", "");
+                        columnList.add(columnName);
+                        columnDataTypeList.add("BIGINT");
 
-			case "bigint":
-                            /*create column name list*/
-                            columnName = createTableTokens.get(i-1).replace(",", "");
-                            columnList.add(columnName);
+                        payloadSize+=8;
 
-                            payloadSize+=8;
+                        /*create is nullable list*/
+                        if (isNullable) {
+                            isNullableList.add("YES");
+                        }
+                        else{
+                            isNullableList.add("NO");
+                        }
 
-                            /*create is nullable list*/
-                            if (isNullable) {
-                                isNullableList.add("YES");
-                            }
-                            else{
-                                isNullableList.add("NO");
-                            }
+                        /*create data type list*/
+                        dataTypeList.add(0x07);
 
-                            /*create data type list*/
-                            dataTypeList.add(0x07);
+                        numColumns++;
+                        break;
 
-                            numColumns++;
-                            break;
+                    case "real":
+                        /*create column name list*/
+                        columnName = createTableTokens.get(i-1).replace(",", "");
+                        columnList.add(columnName);
+                        columnDataTypeList.add("REAL");
 
-			case "real":
-                            /*create column name list*/
-                            columnName = createTableTokens.get(i-1).replace(",", "");
-                            columnList.add(columnName);
+                        payloadSize+=4;
 
-                            payloadSize+=4;
+                        /*create is nullable list*/
+                        if (isNullable) {
+                            isNullableList.add("YES");
+                        }
+                        else{
+                            isNullableList.add("NO");
+                        }
 
-                            /*create is nullable list*/
-                            if (isNullable) {
-                                isNullableList.add("YES");
-                            }
-                            else{
-                                isNullableList.add("NO");
-                            }
+                        /*create data type list*/
+                        dataTypeList.add(0x08);
 
-                            /*create data type list*/
-                            dataTypeList.add(0x08);
+                        numColumns++;
+                        break;
 
-                            numColumns++;
-                            break;
+                    case "double":
+                        /*create column name list*/
+                        columnName = createTableTokens.get(i-1).replace(",", "");
+                        columnList.add(columnName);
+                        columnDataTypeList.add("DOUBLE");
 
-			case "double":
-                            /*create column name list*/
-                            columnName = createTableTokens.get(i-1).replace(",", "");
-                            columnList.add(columnName);
+                        payloadSize+=8;
 
-                            payloadSize+=8;
+                        /*create is nullable list*/
+                        if (isNullable) {
+                            isNullableList.add("YES");
+                        }
+                        else{
+                            isNullableList.add("NO");
+                        }
 
-                            /*create is nullable list*/
-                            if (isNullable) {
-                                isNullableList.add("YES");
-                            }
-                            else{
-                                isNullableList.add("NO");
-                            }
+                        /*create data type list*/
+                        dataTypeList.add(0x09);
 
-                            /*create data type list*/
-                            dataTypeList.add(0x09);
+                        numColumns++;
+                        break;
 
-                            numColumns++;
-                            break;
+                    case "datetime":
+                        /*create column name list*/
+                        columnName = createTableTokens.get(i-1).replace(",", "");
+                        columnList.add(columnName);
+                        columnDataTypeList.add("DATETIME");
 
-                        case "datetime":
-                            /*create column name list*/
-                            columnName = createTableTokens.get(i-1).replace(",", "");
-                            columnList.add(columnName);
+                        payloadSize+=8;
 
-                            payloadSize+=8;
+                        /*create is nullable list*/
+                        if (isNullable) {
+                            isNullableList.add("YES");
+                        }
+                        else{
+                            isNullableList.add("NO");
+                        }
 
-                            /*create is nullable list*/
-                            if (isNullable) {
-                                isNullableList.add("YES");
-                            }
-                            else{
-                                isNullableList.add("NO");
-                            }
+                        /*create data type list*/
+                        dataTypeList.add(0x0A);
 
-                            /*create data type list*/
-                            dataTypeList.add(0x0A);
+                        numColumns++;
+                        break;
 
-                            numColumns++;
-                            break;
+                    case "date":
+                        /*create column name list*/
+                        columnName = createTableTokens.get(i-1).replace(",", "");
+                        columnList.add(columnName);
+                        columnDataTypeList.add("DATE");
 
-			case "date":
-                            /*create column name list*/
-                            columnName = createTableTokens.get(i-1).replace(",", "");
-                            columnList.add(columnName);
+                        payloadSize+=8;
 
-                            payloadSize+=8;
+                        /*create is nullable list*/
+                        if (isNullable) {
+                            isNullableList.add("YES");
+                        }
+                        else{
+                            isNullableList.add("NO");
+                        }
 
-                            /*create is nullable list*/
-                            if (isNullable) {
-                                isNullableList.add("YES");
-                            }
-                            else{
-                                isNullableList.add("NO");
-                            }
+                        /*create data type list*/
+                        dataTypeList.add(0x0B);
 
-                            /*create data type list*/
-                            dataTypeList.add(0x0B);
+                        numColumns++;
+                        break;
 
-                            numColumns++;
-                            break;
+                    case "text":
+                        /*create column name list*/
+                        columnName = createTableTokens.get(i-1).replace(",", "");
+                        columnList.add(columnName);
+                        columnDataTypeList.add("TEXT");
 
-			case "text":
-                            /*create column name list*/
-                            columnName = createTableTokens.get(i-1).replace(",", "");
-                            columnList.add(columnName);
+                        /*create data type list -- different because variable*/
+                        String textColumnName = createTableTokens.get(i-1).replace(",","");
+                        int textColumnNameLength = textColumnName.length();
+                        payloadSize+=textColumnNameLength;
+                        int serialTypeCode = 0x0C + textColumnNameLength;
+                        dataTypeList.add(serialTypeCode);
 
-                            /*create data type list -- different because variable*/
-                            String textColumnName = createTableTokens.get(i-1).replace(",","");
-                            int textColumnNameLength = textColumnName.length();
-                            payloadSize+=textColumnNameLength;
-                            int serialTypeCode = 0x0C + textColumnNameLength;
-                            dataTypeList.add(serialTypeCode);
+                        /*create is nullable list*/
+                        if (isNullable) {
+                            isNullableList.add("YES");
+                        }
+                        else{
+                            isNullableList.add("NO");
+                        }
 
-                            /*create is nullable list*/
-                            if (isNullable) {
-                                isNullableList.add("YES");
-                            }
-                            else{
-                                isNullableList.add("NO");
-                            }
+                        numColumns++;
+                        break;
 
-                            numColumns++;
-                            break;
-
-			default:
-                            /* This word does not add to the */
-                            break;
-                    }
-
+                    default:
+                        /* This word does not add to the */
+                        break;
                 }
-                recordPayloadHeader.add(0, numColumns); //add number of columns to the array list
-                //System.out.println("Column List contains: " + columnList.toString());
-                //System.out.println("Data_type List contains: " + dataTypeList.toString());
-                //System.out.println("isNullable List contains: " + isNullableList.toString());
-
-
-		/*2) Code to create a .tbl file to contain table data */
-		try {
-                    /*  Create RandomAccessFile tableFile in read-write mode.
-                     *  Note that this doesn't create the table file in the correct directory structure
-                     */
-                    RandomAccessFile tableFile = new RandomAccessFile(tableFileName, "rw");
-                    tableFile.setLength(pageSize);
-                    tableFile.seek(0);
-                    /*Leaf*/
-                    tableFile.write(0x0D);
-                    /*Num cols (starts with 0)*/
-                    tableFile.write(0x00);
-                    /*Close stream*/
-                    tableFile.close();
-                    //tableFile.writeInt(63); /*Why is this 63?*/
             }
-		catch(Exception e) {
-                    System.out.println(e);
-		}
+            recordPayloadHeader.add(0, numColumns); //add number of columns to the array list
 
-                /*3) Write the data to the beaverbase_tables .tbl*/
-                /*  Code to insert a row in the beaverbase_tables table
-		 *  i.e. database catalog meta-data
-		 */
+            /*create a .tbl file to contain table data */
+            try {
+                /*  Create RandomAccessFile tableFile in read-write mode.
+                 *  Note that this doesn't create the table file in the correct directory structure
+                 */
+                RandomAccessFile tableFile = new RandomAccessFile(tableFileName, "rw");
+                tableFile.setLength(pageSize);
+                tableFile.seek(0);
+                /*Leaf*/
+                tableFile.write(0x0D);
+                /*Num cols (starts with 0)*/
+                tableFile.write(0x00);
+                /*Close stream*/
+                tableFile.close();
+                //tableFile.writeInt(63); /*Why is this 63?*/
+            }
+            catch(Exception e) {
+                System.out.println(e);
+            }
 
-                try{
-                    int catTableRowId = 1;
+            /*update beaverbase_tables in catalog*/
+            try{
+                /*grab the file to write to*/
+                RandomAccessFile beaverbase_tables = new RandomAccessFile("data/catalog/beaverbase_tables.tbl", "rw");
+                beaverbase_tables.seek(0);
+                int pageType = beaverbase_tables.read();
 
-                    /*grab the file to write to*/
-                    //System.out.println("writing to beaverbase_tables.tbl");
-                    RandomAccessFile beaverbase_tables = new RandomAccessFile("data/catalog/beaverbase_tables.tbl", "rw");
-                    beaverbase_tables.seek(0);
-                    int pageType = beaverbase_tables.read();
+                /*increment number of records*/
+                beaverbase_tables.seek(1);
+                int recordCount = beaverbase_tables.read();
+                recordCount++;
+                beaverbase_tables.seek(1);
+                beaverbase_tables.write(recordCount);
 
+                /*retrieve start of content*/
+                beaverbase_tables.seek(2);
+                int startOfContent = beaverbase_tables.readShort();
+                //System.out.println("Start of Content: " + startOfContent);
+
+                /*calculate payload length-- 2+c in this case -- 1 (columns not counting row_id + 1 (text) + column_name_length*/
+                int catalogTablesPayloadLength = 2 + tableName.length();
+
+                /*update the start of content*/
+                int newStartOfContent = startOfContent - catalogTablesPayloadLength;
+                //System.out.println("New Start of Content: "+ newStartOfContent);
+                beaverbase_tables.seek(2);
+                beaverbase_tables.writeShort(newStartOfContent);
+
+                /*add the location of the new record to list*/
+                int recordLocationPosition = 8+((recordCount-1)*2);
+                beaverbase_tables.seek(recordLocationPosition);
+                beaverbase_tables.writeShort(newStartOfContent);
+
+                /*write payload*/
+                int recordLocation = startOfContent - catalogTablesPayloadLength;
+                beaverbase_tables.seek(recordLocation);
+                beaverbase_tables.write(0x1); //number of columns in beaverbase_tables
+                int textTypeCode = 0xC+(int)tableName.length();
+                beaverbase_tables.writeByte((int)textTypeCode); //rowid is an INT --> Serial Typecode 6
+                beaverbase_tables.write(tableName.getBytes());
+                System.out.println(tableName+" created");
+
+                /*close connection*/
+                beaverbase_tables.close();
+
+            }
+            catch(Exception e) {
+                System.out.println(e);
+            }
+
+            /*update beaverbase_columns*/
+            try{
+                /*grab the file to write to*/
+                RandomAccessFile beaverbase_columns = new RandomAccessFile("data/catalog/beaverbase_columns.tbl", "rw");
+                beaverbase_columns.seek(0);
+                int pageType = beaverbase_columns.read();
+
+                /*
+                Determine rowId starting point for each of these columns.
+                Since the create table command does not make the user explicitly input a rowId for each column, the program
+                must determine it automatically. We will find the rowId of the most recently inserted column and then increment
+                from their for each new column of the newly created table.
+                If number of records in beaverbase_columns is zero, we can simply start at 1
+                */
+                beaverbase_columns.seek(1);
+                int recordCount = beaverbase_columns.read();
+                int rowId = 1; //will be changed if recordCount is != 0
+                if (recordCount != 0) {
+
+                    /*find location of most recent record*/
+                    beaverbase_columns.seek(8+((recordCount-1)*2));
+                    int mostRecentRecordLocation = beaverbase_columns.readShort();
+
+                    /*seek to most recent record*/
+                    beaverbase_columns.seek(mostRecentRecordLocation);
+
+                    /*read the 4 byte rowId and update rowId*/
+                    rowId = beaverbase_columns.readInt();
+                }
+
+                /*insert each of the columns as rows in beaverbase_columns.tbl*/
+                for (int i = 0; i < numColumns; i++) {
                     /*increment number of records*/
-                    beaverbase_tables.seek(1);
-                    int recordCount = beaverbase_tables.read();
+                    beaverbase_columns.seek(1);
+                    recordCount = beaverbase_columns.read();
                     recordCount++;
-                    beaverbase_tables.seek(1);
-                    beaverbase_tables.write(recordCount);
+                    beaverbase_columns.seek(1);
+                    beaverbase_columns.write(recordCount);
 
                     /*retrieve start of content*/
-                    beaverbase_tables.seek(2);
-                    int startOfContent = beaverbase_tables.readShort();
-                    //System.out.println("Start of Content: " + startOfContent);
+                    beaverbase_columns.seek(2);
+                    int startOfContent = beaverbase_columns.readShort();
 
-                    /*calculate payload length-- 2+c in this case -- 1 (columns not counting row_id + 1 (text) + column_name_length*/
-                    int catalogTablesPayloadLength = 2 + tableName.length();
-                    //System.out.println("Tables Catalog Payload Length: " + catalogTablesPayloadLength);
+                    /*calculate payload length -- rowId + numCols + colTypes + column names/types*/
+                    int catalogColumnsPayloadLength = 4 + 1 + 5 + tableName.length() + columnList.get(i).length() + columnDataTypeList.get(i).length() + 1 + isNullableList.get(i).length();
 
                     /*update the start of content*/
-                    int newStartOfContent = startOfContent - catalogTablesPayloadLength;
-                    //System.out.println("New Start of Content: "+ newStartOfContent);
-                    beaverbase_tables.seek(2);
-                    beaverbase_tables.writeShort(newStartOfContent);
+                    int newStartOfContent = startOfContent - catalogColumnsPayloadLength;
+                    beaverbase_columns.seek(2);
+                    beaverbase_columns.writeShort(newStartOfContent);
 
                     /*add the location of the new record to list*/
                     int recordLocationPosition = 8+((recordCount-1)*2);
-                    beaverbase_tables.seek(recordLocationPosition);
-                    beaverbase_tables.writeShort(newStartOfContent);
+                    beaverbase_columns.seek(recordLocationPosition);
+                    beaverbase_columns.writeShort(newStartOfContent);
+
+                    /*seek to new start of content to write payload*/
+                    beaverbase_columns.seek(newStartOfContent);
 
                     /*write payload*/
-                    System.out.println("File Pointer1: "+beaverbase_tables.getFilePointer());
-                    int recordLocation = startOfContent - catalogTablesPayloadLength;
-                    System.out.println("recordLocation: " + recordLocation);
-                    System.out.println("startOfContent: " + startOfContent);
-                    System.out.println("catalogTablesPayloadLength: " + catalogTablesPayloadLength);
-                    beaverbase_tables.seek(recordLocation);
-                    beaverbase_tables.write(0x1); //number of columns in beaverbase_tables
-                    int textTypeCode = 0xC+(int)tableName.length();
-                    System.out.println("Text Type Code: " +textTypeCode);
-                    System.out.println("File Pointer2: "+beaverbase_tables.getFilePointer());
-                    beaverbase_tables.writeByte((int)textTypeCode); //rowid is an INT --> Serial Typecode 6
-                    System.out.println("tableName: " + tableName + " length: "+tableName.length());
-                    System.out.println("File Pointer3: "+beaverbase_tables.getFilePointer());
-                    beaverbase_tables.write(tableName.getBytes());
+                    int recordLocation = startOfContent - catalogColumnsPayloadLength;
+                    beaverbase_columns.seek(recordLocation);
 
-                    System.out.println(tableName+" created");
-
-                    beaverbase_tables.close();
-
-
+                    beaverbase_columns.writeInt(rowId); //rowId
+                    beaverbase_columns.writeByte(5); //numCols
+                    beaverbase_columns.writeByte(0xC+tableName.length());
+                    beaverbase_columns.writeByte(0xC+columnList.get(i).length());
+                    beaverbase_columns.writeByte(0xC+columnDataTypeList.get(i).length());
+                    beaverbase_columns.writeByte(0x4);
+                    beaverbase_columns.writeByte(0xC+isNullableList.get(i).length());
+                    beaverbase_columns.write(tableName.getBytes()); //tableName
+                    beaverbase_columns.write(columnList.get(i).getBytes()); //column_name
+                    beaverbase_columns.write(columnDataTypeList.get(i).getBytes()); //data type string
+                    beaverbase_columns.writeByte(i+1); //ordinalPosition
+                    beaverbase_columns.write(isNullableList.get(i).getBytes()); //isNullable
+                    rowId++;
                 }
-                catch(Exception e) {
-                    System.out.println(e);
-		}
 
-                /*4) Write the data to the beaverbase_columns .tbl*/
-		/*  Code to insert rows in the beaverbase_columns table
-		 *  for each column in the new table
-		 *  i.e. database catalog meta-data
-		 */
-                try{
-                    System.out.println("writing to beaverbase_columns.tbl");
-                }
-                catch(Exception e) {
-                    System.out.println(e);
-		}
-	}
+                /*close connection*/
+                beaverbase_columns.close();
+
+            }
+            catch(Exception e) {
+                System.out.println(e);
+            }
+    }
 }

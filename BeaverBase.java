@@ -457,6 +457,7 @@ public class BeaverBase {
 
         //System.out.println("columnList = " + columnList.toString());
         //System.out.println("valuelist = " + valueList.toString());
+        //System.out.println("tableName = " + tableName);
 
         /*retrieve table information about columns*/
         ArrayList<String> columnListActual = getTableInformation(tableName, "columnList");
@@ -553,8 +554,9 @@ public class BeaverBase {
             table.writeShort(newStartOfContent);
 
             table.seek(newStartOfContent);
-            table.writeShort(payloadLength); //payload length
+            table.writeShort(payloadLength - 6 - columnListActual.size()); //record payload length (not counting record header)
             table.writeInt(Integer.parseInt(orderedValueList.get(0))); //rowid
+            table.writeByte(columnListActual.size()-1);
             /*first the serial typecodes*/
             for (int i = 1; i < dataTypeList.size(); i++) {
                 switch (dataTypeList.get(i)) {
@@ -1144,7 +1146,8 @@ public class BeaverBase {
                 //System.out.println("recordLocation = " + recordLocation);
 
                 /*locate, read, and save values of column types*/
-                table.seek(recordLocation+5); //table name
+                table.seek(recordLocation+7); //table name
+                //System.out.println("SEEKING: "+(recordLocation+7));
                 int tableNameLength = table.readByte()-0xC;
                 //System.out.println("tableNameLength = " + tableNameLength);
                 int columnNameLength = table.readByte()-0xC;

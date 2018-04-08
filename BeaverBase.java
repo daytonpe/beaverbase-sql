@@ -286,14 +286,7 @@ public class BeaverBase {
             System.out.println("\tParsing the string:\"" + dropTableString + "\"");
     }
 
-    /**
-     *  Stub method for executing queries
-     *  @param queryString is a String of the user input
-     */
-    public static void parseQuery(String queryString) {
-        System.out.println("\tParsing the string:\"" + queryString + "\"");
 
-    }
 
     /**
      *  Stub method for updating records
@@ -302,6 +295,79 @@ public class BeaverBase {
     public static void parseUpdate(String updateString) {
             System.out.println("STUB: This is the dropTable method");
             System.out.println("Parsing the string:\"" + updateString + "\"");
+    }
+
+    /*parse query*/
+    public static void parseQuery(String queryString) {
+        System.out.println("\tParsing the string:\"" + queryString + "\"");
+        ArrayList<String> columnList = new ArrayList<>(); //possibly just the wildcard *
+        String tableName;
+        String constraintColumn;
+        String constraintValue;
+        String constraintOperator;
+
+        /*parse out all the values from the query*/
+        ArrayList<String> fromSplit = new ArrayList<>(Arrays.asList(queryString.split("from")));
+        //System.out.println("fromSplit = " + fromSplit.toString());
+        String selectString = fromSplit.get(0);
+        String fromString = fromSplit.get(1);
+        ArrayList<String> whereSplit = new ArrayList<>(Arrays.asList(fromString.split("where")));
+        //System.out.println("whereSplit = " + whereSplit.toString());
+        tableName = whereSplit.get(0).replace(" ","");
+        //System.out.println("tableName = " + tableName);
+        String constraintString = whereSplit.get(1);
+        //System.out.println("constraintString = " + constraintString);
+        ArrayList<String> constraintSplit = new ArrayList<>(Arrays.asList(constraintString.split("\\s+")));
+        //System.out.println("constraintSplit = " + constraintSplit);
+        constraintColumn = constraintSplit.get(1);
+        //System.out.println("constraintColumn = " + constraintColumn);
+        constraintOperator = constraintSplit.get(2);
+        //System.out.println("constraintOperator = " + constraintOperator);
+        constraintValue = constraintSplit.get(3);
+        //System.out.println("constraintValue = " + constraintValue);
+        ArrayList<String> selectSplit = new ArrayList<>(Arrays.asList(selectString.split(" ")));
+        for (int i = 1; i < selectSplit.size(); i++) {
+            columnList.add(selectSplit.get(i).replace(",", ""));
+        }
+        //System.out.println("columnList = " + columnList.toString());
+
+        /*retrieve table information about columns*/
+        ArrayList<String> columnListActual = getTableInformation(tableName, "columnList");
+        //System.out.println("columnListActual = " + columnListActual.toString());
+        ArrayList<String> notNullList = getTableInformation(tableName, "nullList");
+        //System.out.println("notNullList = " + notNullList.toString());
+        ArrayList<String> dataTypeList = getTableInformation(tableName, "dataTypeList");
+        //System.out.println("dataTypeList = " + dataTypeList.toString());
+        ArrayList<String> ordinalPositionList = getTableInformation(tableName, "ordinalPositionList");
+        //System.out.println("ordinalPositionList = " + ordinalPositionList.toString());
+
+        /*pass values on to be printed by printQueryResults*/
+        printQueryResults(
+            tableName,
+            constraintColumn,
+            constraintOperator,
+            constraintValue,
+            columnList,
+            columnListActual,
+            notNullList,
+            dataTypeList,
+            ordinalPositionList);
+
+    }
+
+    /*print query results from parsed query parameters*/
+    public static void printQueryResults(
+            String tableName,
+            String constraintColumn,
+            String constraintOperator,
+            String constraintValue,
+            ArrayList<String> columnList,
+            ArrayList<String> columnListActual,
+            ArrayList<String> notNullList,
+            ArrayList<String> dataTypeList,
+            ArrayList<String> ordinalPositionList
+            ){
+
     }
 
     /*insert into table*/
@@ -323,18 +389,18 @@ public class BeaverBase {
         for (int i = 0; i < rightInsertTokens.size(); i++)
             valueList.add(rightInsertTokens.get(i).replace(",", "").replace(")", ""));
 
-        System.out.println("columnList = " + columnList.toString());
-        System.out.println("valuelist = " + valueList.toString());
+        //System.out.println("columnList = " + columnList.toString());
+        //System.out.println("valuelist = " + valueList.toString());
 
         /*retrieve table information about columns*/
         ArrayList<String> columnListActual = getTableInformation(tableName, "columnList");
-        System.out.println("columnListActual = " + columnListActual.toString());
+        //System.out.println("columnListActual = " + columnListActual.toString());
         ArrayList<String> notNullList = getTableInformation(tableName, "nullList");
-        System.out.println("notNullList = " + notNullList.toString());
+        //System.out.println("notNullList = " + notNullList.toString());
         ArrayList<String> dataTypeList = getTableInformation(tableName, "dataTypeList");
-        System.out.println("dataTypeList = " + dataTypeList.toString());
+        //System.out.println("dataTypeList = " + dataTypeList.toString());
         ArrayList<String> ordinalPositionList = getTableInformation(tableName, "ordinalPositionList");
-        System.out.println("ordinalPositionList = " + ordinalPositionList);
+        //System.out.println("ordinalPositionList = " + ordinalPositionList);
 
         /*ensure columns and null properties match*/
         if(columnList.size() != columnListActual.size())
@@ -351,8 +417,8 @@ public class BeaverBase {
                 }
             }
         }
-        System.out.println("orderedValueList = " + orderedValueList.toString());
-        System.out.println("");
+        //System.out.println("orderedValueList = " + orderedValueList.toString());
+        //System.out.println("");
 
         /*determine payload length*/
         int payloadLength = 4 + 1 + columnList.size() -1;
@@ -390,7 +456,7 @@ public class BeaverBase {
                     break;
             }
         }
-        System.out.println("payloadLength = " + payloadLength);
+        //System.out.println("payloadLength = " + payloadLength);
 
         /*connect to correct table page*/
         try{

@@ -354,9 +354,160 @@ public class BeaverBase {
         System.out.println("orderedValueList = " + orderedValueList.toString());
         System.out.println("");
 
-        /*connect to correct table page*/
+        /*determine payload length*/
+        int payloadLength = 4 + 1 + columnList.size() -1;
+        for (int i = 1; i < dataTypeList.size(); i++) { //loop through the dataTypeList and add appropriate amounts to payload length.
+            switch (dataTypeList.get(i)) {
+                case "TINYINT":
+                    payloadLength+=1;
+                    break;
+                case "SMALLINT":
+                    payloadLength+=2;
+                    break;
+                case "INT":
+                    payloadLength+=4;
+                    break;
+                case "BIGINT":
+                    payloadLength+=8;
+                    break;
+                case "REAL":
+                    payloadLength+=4;
+                    break;
+                case "DOUBLE":
+                    payloadLength+=8;
+                    break;
+                case "DATETIME":
+                    payloadLength+=8;
+                    break;
+                case "DATE":
+                    payloadLength+=8;
+                    break;
+                case "TEXT":
+                    payloadLength+=orderedValueList.get(i).length();;
+                    break;
+                default:
+                    System.out.println("There is an issue with this command \"" + dataTypeList.get(i) + "\"");
+                    break;
+            }
+        }
+        System.out.println("payloadLength = " + payloadLength);
 
-        /*write data*/
+        /*connect to correct table page*/
+        try{
+            String tablePath = "data/user_data/"+tableName+".tbl";
+            RandomAccessFile table = new RandomAccessFile(tablePath, "rw");
+            table.seek(1);
+            int recordCount = table.read();
+
+            int lastRecordLocation;
+            if (recordCount == 0) {
+                lastRecordLocation = (int) pageSize;
+            }
+            else{
+                table.seek(8+((recordCount-1)*2));
+                lastRecordLocation = table.readShort();
+            }
+
+            /*update the record count*/
+            recordCount++;
+            table.seek(1);
+            table.writeByte(recordCount);
+
+            /*seek to correct location and write payload*/
+            int newStartOfContent = lastRecordLocation - payloadLength;
+
+            /*update start of content*/
+            table.seek(2);
+            table.writeShort(newStartOfContent);
+
+            table.seek(newStartOfContent);
+            table.writeInt(Integer.parseInt(orderedValueList.get(0))); //rowid
+            /*first the serial typecodes*/
+            for (int i = 1; i < dataTypeList.size(); i++) {
+                switch (dataTypeList.get(i)) {
+                    case "TINYINT":
+                        table.write(0x4);
+                        break;
+                    case "SMALLINT":
+                        table.write(0x5);
+                        break;
+                    case "INT":
+                        table.write(0x6);
+                        break;
+                    case "BIGINT":
+                        table.write(0x7);
+                        break;
+                    case "REAL":
+                        table.write(0x8);
+                        break;
+                    case "DOUBLE":
+                        table.write(0x9);
+                        break;
+                    case "DATETIME":
+                        table.write(0xA);
+                        break;
+                    case "DATE":
+                        table.write(0xB);
+                        break;
+                    case "TEXT":
+                        table.write(0xC+orderedValueList.get(i).length());
+                        break;
+                    default:
+                        System.out.println("There is an issue with this command \"" + dataTypeList.get(i) + "\"");
+                        break;
+                }
+            }
+            /*then the actual values*/
+            for (int i = 1; i < dataTypeList.size(); i++) {
+                switch (dataTypeList.get(i)) {
+                    case "TINYINT":
+                        table.writeByte(Integer.parseInt(orderedValueList.get(i)));
+                        break;
+                    case "SMALLINT":
+                        table.writeShort(Integer.parseInt(orderedValueList.get(i)));
+                        break;
+                    case "INT":
+                        table.writeInt(Integer.parseInt(orderedValueList.get(i)));
+                        break;
+                    case "BIGINT":
+                        table.writeLong(Integer.parseInt(orderedValueList.get(i)));
+                        break;
+                    case "REAL":
+                        table.writeDouble(Double.parseDouble(orderedValueList.get(i)));
+                        break;
+                    case "DOUBLE":
+                        table.writeDouble(Double.parseDouble(orderedValueList.get(i)));
+                        break;
+                    case "DATETIME":
+                        table.writeInt(Integer.parseInt(orderedValueList.get(i)));
+                        break;
+                    case "DATE":
+                        table.writeInt(Integer.parseInt(orderedValueList.get(i)));
+                        break;
+                    case "TEXT":
+                        table.write(orderedValueList.get(i).getBytes());
+                        break;
+                    default:
+                        System.out.println("There is an issue with this command \"" + dataTypeList.get(i) + "\"");
+                        break;
+                }
+            }
+
+
+
+            /*add record location to list*/
+            int recordLocationPosition = 8+((recordCount-1)*2);
+            table.seek(recordLocationPosition);
+            table.writeShort(newStartOfContent);
+
+            table.close();
+        }
+        catch(IOException e) {
+            System.out.println(e);
+        }
+
+
+
 
 
     }
@@ -643,12 +794,26 @@ public class BeaverBase {
              *  Note that this doesn't create the table file in the correct directory structure
              */
             RandomAccessFile tableFile = new RandomAccessFile(tableFileName, "rw");
+            /* Initially, the file is one page in length */
             tableFile.setLength(pageSize);
+
             tableFile.seek(0);
+
             /*Leaf*/
             tableFile.write(0x0D);
+
             /*Num cols (starts with 0)*/
             tableFile.write(0x00);
+
+            /*Start of first record*/
+            tableFile.writeShort((int) pageSize);
+
+            /*write placeholder FF FF FF FF for the Right Page*/
+            tableFile.write(0xFF);
+            tableFile.write(0xFF);
+            tableFile.write(0xFF);
+            tableFile.write(0xFF);
+
             /*Close stream*/
             tableFile.close();
             //tableFile.writeInt(63); /*Why is this 63?*/
@@ -835,10 +1000,11 @@ public class BeaverBase {
             //System.out.println("recordCount = " + recordCount);
 
             /*loop through the records in the beaverbase_columnspage (linearly)*/
-            for (int i = 1; i < recordCount-1; i++) {
+            for (int i = 1; i <= recordCount; i++) {
 
                 /*find location of next record, read it*/
                 table.seek(8+((i-1)*2));
+                //System.out.println("seeking to: " + (8+((i-1)*2)) );
                 int recordLocation = table.readShort();
                 //System.out.println("recordLocation = " + recordLocation);
 
@@ -863,6 +1029,7 @@ public class BeaverBase {
 
                 /*check if table name is same as table for which we are looking*/
                 //System.out.println(tableName.equals(readTableNameString));
+
                 if (tableName.equals(readTableNameString)){
                     /*if it matches, add everything to the data arrayLists*/
 

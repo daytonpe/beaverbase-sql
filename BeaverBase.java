@@ -355,18 +355,84 @@ public class BeaverBase {
 
     }
 
+    /*given a string value of a data type, return the content size*/
+    public static int getContentSize(String dataType){
+        switch (dataType) {
+            case "TINYINT":
+                return 1;
+            case "SMALLINT":
+                return 2;
+            case "INT":
+                return 4;
+            case "BIGINT":
+                return 8;
+            case "REAL":
+                return 4;
+            case "DOUBLE":
+                return 8;
+            case "DATETIME":
+                return 8;
+            case "DATE":
+                return 8;
+            case "TEXT":
+                return 1;
+            default:
+                throw new Error("Error: Not a valid data type: "+dataType);
+        }
+    }
+
     /*print query results from parsed query parameters*/
     public static void printQueryResults(
-            String tableName,
-            String constraintColumn,
-            String constraintOperator,
-            String constraintValue,
-            ArrayList<String> columnList,
-            ArrayList<String> columnListActual,
-            ArrayList<String> notNullList,
-            ArrayList<String> dataTypeList,
-            ArrayList<String> ordinalPositionList
-            ){
+        String tableName,
+        String constraintColumn,
+        String constraintOperator,
+        String constraintValue,
+        ArrayList<String> columnList,
+        ArrayList<String> columnListActual,
+        ArrayList<String> notNullList,
+        ArrayList<String> dataTypeList,
+        ArrayList<String> ordinalPositionList
+        ){
+
+        /*determine offset from start of each record*/
+        /*first determine where it is in ordinal position*/
+        for (int i = 0; i < columnListActual.size(); i++) {
+
+        }
+
+        int constraintValueOffset;
+
+        try{
+            RandomAccessFile beaverbase_tables = new RandomAccessFile("data/user_data/"+tableName+".tbl", "rw");
+
+            /*determine number of records*/
+            beaverbase_tables.seek(1);
+            int recordCount = beaverbase_tables.read();
+
+            /*linear search records for those that match our query*/
+            for (int i = 1; i <= recordCount; i++) {
+
+                /*get location of next title*/
+                beaverbase_tables.seek(8+((i-1)*2));
+                int recordLocation = beaverbase_tables.readShort();
+
+
+
+                /*get rowId*/
+                beaverbase_tables.seek(recordLocation);
+                int rowId = beaverbase_tables.readInt();
+
+
+
+                /*close out of table*/
+                beaverbase_tables.close();
+                System.out.println("");
+            }
+
+        }
+        catch(IOException e) {
+            System.out.println(e);
+        }
 
     }
 
@@ -421,7 +487,7 @@ public class BeaverBase {
         //System.out.println("");
 
         /*determine payload length*/
-        int payloadLength = 4 + 1 + columnList.size() -1;
+        int payloadLength = 2 + 4 + 1 + columnList.size() -1;
         for (int i = 1; i < dataTypeList.size(); i++) { //loop through the dataTypeList and add appropriate amounts to payload length.
             switch (dataTypeList.get(i)) {
                 case "TINYINT":
@@ -487,6 +553,7 @@ public class BeaverBase {
             table.writeShort(newStartOfContent);
 
             table.seek(newStartOfContent);
+            table.writeShort(payloadLength); //payload length
             table.writeInt(Integer.parseInt(orderedValueList.get(0))); //rowid
             /*first the serial typecodes*/
             for (int i = 1; i < dataTypeList.size(); i++) {
@@ -597,11 +664,11 @@ public class BeaverBase {
                 int recordLocation = beaverbase_tables.readShort();
 
                 /*get rowId*/
-                beaverbase_tables.seek(recordLocation);
+                beaverbase_tables.seek(recordLocation+2);
                 int rowId = beaverbase_tables.readInt();
 
                 /*get length of table name*/
-                beaverbase_tables.seek(recordLocation+5);
+                beaverbase_tables.seek(recordLocation+7);
                 int tableNameLength = beaverbase_tables.readUnsignedByte()-0xC;
 
                 /*read and print the table name*/
@@ -615,7 +682,7 @@ public class BeaverBase {
             System.out.println("");
 
         }
-        catch(Exception e) {
+        catch(IOException e) {
             System.out.println(e);
         }
     }
@@ -914,7 +981,7 @@ public class BeaverBase {
             //System.out.println("Start of Content: " + startOfContent);
 
             /*calculate payload length-- 2+c in this case -- 1 (columns not counting row_id + 1 (text) + column_name_length*/
-            int catalogTablesPayloadLength = 4 + 2 + tableName.length();
+            int catalogTablesPayloadLength = 2 + 4 + 2 + tableName.length();
 
             /*update the start of content*/
             int newStartOfContent = startOfContent - catalogTablesPayloadLength;
@@ -930,7 +997,8 @@ public class BeaverBase {
             /*write payload*/
             int recordLocation = startOfContent - catalogTablesPayloadLength;
             beaverbase_tables.seek(recordLocation);
-            beaverbase_tables.writeInt(rowId);
+            beaverbase_tables.writeShort(catalogTablesPayloadLength - 8); //record payload length (not including record header)
+            beaverbase_tables.writeInt(rowId); //rowId
             beaverbase_tables.write(0x1); //number of columns in beaverbase_tables
             int textTypeCode = 0xC+(int)tableName.length();
             beaverbase_tables.writeByte((int)textTypeCode); //rowid is an INT --> Serial Typecode 6
@@ -980,7 +1048,7 @@ public class BeaverBase {
                 int startOfContent = beaverbase_columns.readShort();
 
                 /*calculate payload length -- rowId + numCols + colTypes + column names/types*/
-                int catalogColumnsPayloadLength = 4 + 1 + 5 + tableName.length() + columnList.get(i).length() + columnDataTypeList.get(i).length() + 1 + isNullableList.get(i).length();
+                int catalogColumnsPayloadLength = 2 + 4 + 1 + 5 + tableName.length() + columnList.get(i).length() + columnDataTypeList.get(i).length() + 1 + isNullableList.get(i).length();
 
                 /*update the start of content*/
                 int newStartOfContent = startOfContent - catalogColumnsPayloadLength;
@@ -999,6 +1067,7 @@ public class BeaverBase {
                 int recordLocation = startOfContent - catalogColumnsPayloadLength;
                 beaverbase_columns.seek(recordLocation);
 
+                beaverbase_columns.writeShort(catalogColumnsPayloadLength - 12); //record payload length (not including record header)
                 beaverbase_columns.writeInt(rowId); //rowId
                 beaverbase_columns.writeByte(5); //numCols
                 beaverbase_columns.writeByte(0xC+tableName.length());

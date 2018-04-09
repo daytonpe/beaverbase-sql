@@ -293,8 +293,82 @@ public class BeaverBase {
      *  @param updateString is a String of the user input
      */
     public static void parseUpdate(String updateString) {
-        System.out.println("STUB: This is the dropTable method");
-        System.out.println("Parsing the string:\"" + updateString + "\"");
+        String tableName;
+        String changeColumn;
+        String changeValue;
+        String constraintValue;
+        String constraintColumn;
+        String constraintOperator;
+
+        /*parse out all the values from the query*/
+        ArrayList<String> fromSplit = new ArrayList<>(Arrays.asList(updateString.split("set")));
+        //System.out.println("fromSplit = " + fromSplit.toString());
+
+        String leftString = fromSplit.get(0);
+        ArrayList<String> leftSplit = new ArrayList<>(Arrays.asList(leftString.split(" ")));
+        //System.out.println("leftSplit = " + leftSplit);
+
+        tableName = leftSplit.get(1).replace(" ", "");
+        //System.out.println("tableName = " + tableName);
+
+        ArrayList<String> whereSplit = new ArrayList<>(Arrays.asList(fromSplit.get(1).split("where")));
+        //System.out.println("whereSplit = " + whereSplit);
+        ArrayList<String> changeArray = new ArrayList<>(Arrays.asList(whereSplit.get(0).split(" ")));
+        //System.out.println("changeArray = " + changeArray);
+        changeColumn = changeArray.get(1).replace(" ", "").replace(",","");
+        //System.out.println("changeColumn = " + changeColumn);
+        changeValue = changeArray.get(3).replace(" ", "").replace(",","");
+        //System.out.println("changeValue = " + changeValue);
+
+        ArrayList<String> constraintArray = new ArrayList<>(Arrays.asList(whereSplit.get(1).split(" ")));
+        constraintColumn = constraintArray.get(1).replace(" ", "").replace(",","");
+        constraintOperator = constraintArray.get(2).replace(" ", "").replace(",","");
+        constraintValue = constraintArray.get(3).replace(" ", "").replace(",","");
+        //System.out.println("constraintArray = " + constraintArray);
+        //System.out.println("constraintOperator = " + constraintOperator);
+        //System.out.println("constraintColumn = " + constraintColumn);
+        //System.out.println("constraintValue = " + constraintValue);
+
+        /*retrieve table information about columns*/
+        ArrayList<String> columnListActual = getTableInformation(tableName, "columnList");
+        //System.out.println("columnListActual = " + columnListActual.toString());
+        ArrayList<String> notNullList = getTableInformation(tableName, "nullList");
+        //System.out.println("notNullList = " + notNullList.toString());
+        ArrayList<String> dataTypeList = getTableInformation(tableName, "dataTypeList");
+        //System.out.println("dataTypeList = " + dataTypeList.toString());
+
+        /*validate query columns*/
+        if (columnListActual.contains(changeColumn)) {
+           /*pass values on to be printed by printQueryResults*/
+            updateRecord(
+                tableName,
+                constraintColumn,
+                constraintOperator,
+                constraintValue,
+                changeColumn,
+                changeValue,
+                columnListActual,
+                notNullList,
+                dataTypeList);
+        }
+        else{
+            System.out.println("invalid columns in query");
+        }
+    }
+
+    /*update a record*/
+    public static void updateRecord(
+        String tableName,
+        String constraintColumn,
+        String constraintOperator,
+        String constraintValue,
+        String changeColumn,
+        String changeValue,
+        ArrayList<String> columnListActual,
+        ArrayList<String> notNullList,
+        ArrayList<String> dataTypeList
+        ){
+        System.out.println("Update Record Called");
     }
 
     /*parse query*/
@@ -542,9 +616,9 @@ public class BeaverBase {
             System.out.print(String.format("%-16s" , columnList.get(i)));
         }
         System.out.println("");
-        for (String columnList1 : columnList) {
+        columnList.forEach((_item) -> {
             System.out.print("----------------");
-        }
+        });
         System.out.println("");
 
         int textConstraintLength = 0; //only used if type of constraint is TEXT

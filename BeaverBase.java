@@ -282,8 +282,8 @@ public class BeaverBase {
      *  @param dropTableString is a String of the user input
      */
     public static void dropTable(String dropTableString) {
-            System.out.println("STUB: This is the dropTable method.");
-            System.out.println("\tParsing the string:\"" + dropTableString + "\"");
+        System.out.println("STUB: This is the dropTable method.");
+        System.out.println("\tParsing the string:\"" + dropTableString + "\"");
     }
 
 
@@ -293,8 +293,8 @@ public class BeaverBase {
      *  @param updateString is a String of the user input
      */
     public static void parseUpdate(String updateString) {
-            System.out.println("STUB: This is the dropTable method");
-            System.out.println("Parsing the string:\"" + updateString + "\"");
+        System.out.println("STUB: This is the dropTable method");
+        System.out.println("Parsing the string:\"" + updateString + "\"");
     }
 
     /*parse query*/
@@ -340,6 +340,11 @@ public class BeaverBase {
         //System.out.println("dataTypeList = " + dataTypeList.toString());
         ArrayList<String> ordinalPositionList = getTableInformation(tableName, "ordinalPositionList");
         //System.out.println("ordinalPositionList = " + ordinalPositionList.toString());
+
+        /*if a wildcard is given, add all columns to the column list*/
+        if (columnList.contains("*")) {
+            columnList = columnListActual;
+        }
 
         /*validate query columns*/
         if (validateQueryColumns(columnList, columnListActual)) {

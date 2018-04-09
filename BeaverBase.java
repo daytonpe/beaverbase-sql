@@ -319,7 +319,7 @@ public class BeaverBase {
         {
             hasConstraint = true;
             ArrayList<String> whereSplit = new ArrayList<>(Arrays.asList(fromString.split("where")));
-            System.out.println("whereSplit = " + whereSplit.toString());
+            //System.out.println("whereSplit = " + whereSplit.toString());
             tableName = whereSplit.get(0).replace(" ","");
             //System.out.println("tableName = " + tableName);
             String constraintString = whereSplit.get(1);
@@ -482,6 +482,46 @@ public class BeaverBase {
         return booleanPrintArray;
     }
 
+    /*given two ints and a constraint type, determine if the constraint is met*/
+    public static boolean checkIntConstraint(int value, int constraint, String operator){
+        switch (operator){
+            case "=":
+                return value == constraint;
+            case "!=":
+                return value != constraint;
+            case "<=":
+                return value <= constraint;
+            case "<":
+                return value < constraint;
+            case ">=":
+                return value >= constraint;
+            case ">":
+                return value >= constraint;
+            default:
+                throw new Error("Not a valid constraint operator: "+operator);
+        }
+    }
+
+    /*given two doubles and a constraint type, determine if the constraint is met*/
+    public static boolean checkDoubleConstraint(double value, double constraint, String operator){
+        switch (operator){
+            case "=":
+                return value == constraint;
+            case "!=":
+                return value != constraint;
+            case "<=":
+                return value <= constraint;
+            case "<":
+                return value < constraint;
+            case ">=":
+                return value >= constraint;
+            case ">":
+                return value >= constraint;
+            default:
+                throw new Error("Not a valid constraint operator: "+operator);
+        }
+    }
+
     /*print query results from parsed query parameters*/
     public static void printQueryResults(
         String tableName,
@@ -502,7 +542,7 @@ public class BeaverBase {
             System.out.print(String.format("%-16s" , columnList.get(i)));
         }
         System.out.println("");
-        for (int i = 0; i < columnList.size(); i++) {
+        for (String columnList1 : columnList) {
             System.out.print("----------------");
         }
         System.out.println("");
@@ -585,71 +625,66 @@ public class BeaverBase {
                     String actualConstraintValue1 = new String(temp);
                     //System.out.println("actualConstraintValue1 = "+actualConstraintValue1);
                     //System.out.println("actualConstraintValue1 =? constraintValue : " + actualConstraintValue1 +" =? "+constraintValue);
-                    if (actualConstraintValue1.equals(constraintValue)) {
-                        foundMatch = true;
+                    /* Test if we match constraint depending on constraint operator.
+                    For TEXT data type only != and = are sensical */
+                    switch (constraintOperator) {
+                        case "=":
+                            foundMatch = actualConstraintValue1.equals(constraintValue);
+                            break;
+                        case "!=":
+                            foundMatch = !actualConstraintValue1.equals(constraintValue);
+                            break;
+                        default:
+                            throw new Error("Invalid constraint "+constraintOperator);
                     }
+
+
                 }
                 else{
                     switch (recordConstraintType) {
                         case "TINYINT":
                             int actualConstraintValue2 = table.readByte();
                             //System.out.println("actualConstraintValue2 = "+actualConstraintValue2);
-                            if (actualConstraintValue2 == Integer.parseInt(constraintValue)) {
-                                foundMatch = true;
-                            }
+                            foundMatch = checkIntConstraint(actualConstraintValue2, Integer.parseInt(constraintValue), constraintOperator);
                             break;
                         case "SMALLINT":
                             int actualConstraintValue3 = table.readShort();
                             //System.out.println("actualConstraintValue3 = "+actualConstraintValue3);
-                            if (actualConstraintValue3 == Integer.parseInt(constraintValue)) {
-                                foundMatch = true;
-                            }
+                            foundMatch = checkIntConstraint(actualConstraintValue3, Integer.parseInt(constraintValue), constraintOperator);
                             break;
                         case "INT":
                             //System.out.println("pointer: "+table.getFilePointer());
                             int actualConstraintValue4 = table.readInt();
                             //System.out.println("actualConstraintValue4 = "+actualConstraintValue4);
                             //System.out.println("actualConstraintValue4 =? constraintValue :" + actualConstraintValue4 +" =? "+constraintValue);
-                            if (actualConstraintValue4 == Integer.parseInt(constraintValue)) {
-                                foundMatch = true;
-                            }
+                            foundMatch = checkIntConstraint(actualConstraintValue4, Integer.parseInt(constraintValue), constraintOperator);
                             break;
                         case "BIGINT":
                             double actualConstraintValue5 = table.readLong();
                             //System.out.println("actualConstraintValue5 = "+actualConstraintValue5);
-                            if (actualConstraintValue5 == Double.parseDouble(constraintValue)){
-                                foundMatch = true;
-                            }
+                            foundMatch = checkDoubleConstraint(actualConstraintValue5, Double.parseDouble(constraintValue), constraintOperator);
                             break;
                         case "REAL":
                             int actualConstraintValue6 = table.readInt();
                             //System.out.println("actualConstraintValue6 = "+actualConstraintValue6);
-                            if (actualConstraintValue6 == Integer.parseInt(constraintValue)) {
-                                foundMatch = true;
-                            }
+                            foundMatch = checkIntConstraint(actualConstraintValue6, Integer.parseInt(constraintValue), constraintOperator);
                             break;
                         case "DOUBLE":
                             //System.out.println("pointer: "+table.getFilePointer());
                             double actualConstraintValue7 = table.readDouble();
                             //System.out.println("actualConstraintValue7 = "+actualConstraintValue7);
                             //System.out.println("actualConstraintValue7 =? constraintValue :" + actualConstraintValue7 +" =? "+constraintValue);
-                            if (actualConstraintValue7 == Double.parseDouble(constraintValue)){
-                                foundMatch = true;
-                            }
+                            foundMatch = checkDoubleConstraint(actualConstraintValue7, Double.parseDouble(constraintValue), constraintOperator);
                             break;
                         case "DATETIME":
                             double actualConstraintValue8 = table.readLong();
                             //System.out.println("actualConstraintValue8 = "+actualConstraintValue8);
-                            if (actualConstraintValue8 == Double.parseDouble(constraintValue)){
-                                foundMatch = true;
-                            }
+                            foundMatch = checkDoubleConstraint(actualConstraintValue8, Double.parseDouble(constraintValue), constraintOperator);
                             break;
                         case "DATE":
                             double actualConstraintValue9 = table.readLong();
                             //System.out.println("actualConstraintValue9 = "+actualConstraintValue9);
-                            if (actualConstraintValue9 == Double.parseDouble(constraintValue)){
-                                foundMatch = true;
-                            }
+                            foundMatch = checkDoubleConstraint(actualConstraintValue9, Double.parseDouble(constraintValue), constraintOperator);
                             break;
                         default:
                             throw new Error("Not a valid data type: "+recordConstraintType);
@@ -677,7 +712,6 @@ public class BeaverBase {
                     int dataTypesPointer = recordLocation+7;
                     /*second where the record payload actually starts*/
                     int recordPayloadPointer = recordLocation+7+numColumns;
-
 
 
                     table.seek(recordPayloadPointer);
@@ -745,20 +779,12 @@ public class BeaverBase {
                         }else{
                             recordPayloadPointer+=getContentSize(dataType); //if not text
                         }
-
                     }
-
                     System.out.println();
                 }
-
-
-
-
-
             }
             /*close out of table*/
-                table.close();
-
+            table.close();
         }
         catch(IOException e) {
             System.out.println(e);
@@ -958,8 +984,6 @@ public class BeaverBase {
                 }
             }
 
-
-
             /*add record location to list*/
             int recordLocationPosition = 8+((recordCount-1)*2);
             table.seek(recordLocationPosition);
@@ -970,11 +994,6 @@ public class BeaverBase {
         catch(IOException e) {
             System.out.println(e);
         }
-
-
-
-
-
     }
 
     /*show tables*/

@@ -143,7 +143,11 @@ public class BeaverBase {
                 parseUpdate(userCommand);
                 break;
             case "show":
-                showTables();
+                if (commandTokens.get(1).replace(",", "").replace(" ","").equals("tables")) {
+                   showTables();
+                } else{
+                    System.out.println("Did you mean: SHOW TABLES;\n");
+                }
                 break;
             case "help":
                 help();
@@ -276,7 +280,6 @@ public class BeaverBase {
             }
     }
 
-
     /**
      *  Stub method for dropping tables
      *  @param dropTableString is a String of the user input
@@ -285,8 +288,6 @@ public class BeaverBase {
         System.out.println("STUB: This is the dropTable method.");
         System.out.println("\tParsing the string:\"" + dropTableString + "\"");
     }
-
-
 
     /**
      *  Stub method for updating records
@@ -338,7 +339,10 @@ public class BeaverBase {
         //System.out.println("dataTypeList = " + dataTypeList.toString());
 
         /*validate query columns*/
-        if (columnListActual.contains(changeColumn)) {
+        if(changeColumn.equals("rowid")){
+            System.out.println("rowid is immutable\n");
+        }
+        else if (columnListActual.contains(changeColumn)) {
            /*pass values on to be printed by printQueryResults*/
             updateRecord(
                 tableName,
@@ -399,7 +403,6 @@ public class BeaverBase {
                 int numColumns = table.readByte();
 
                 int recordConstraintOffset = 0;
-
 
                 /*determine data type of constraint*/
                 String recordConstraintType = dataTypeList.get(constraintOrdinalPosition-1);
@@ -594,7 +597,6 @@ public class BeaverBase {
         catch(IOException e) {
             System.out.println(e);
         }
-        System.out.println();
     }
 
     /*parse query*/

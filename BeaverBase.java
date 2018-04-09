@@ -302,29 +302,40 @@ public class BeaverBase {
         //System.out.println("\tParsing the string:\"" + queryString + "\"");
         ArrayList<String> columnList = new ArrayList<>(); //possibly just the wildcard *
         String tableName;
-        String constraintColumn;
-        String constraintValue;
-        String constraintOperator;
+        String constraintColumn = null;
+        String constraintValue = null;
+        String constraintOperator = null;
+        boolean hasConstraint = false;
 
         /*parse out all the values from the query*/
         ArrayList<String> fromSplit = new ArrayList<>(Arrays.asList(queryString.split("from")));
         //System.out.println("fromSplit = " + fromSplit.toString());
         String selectString = fromSplit.get(0);
         String fromString = fromSplit.get(1);
-        ArrayList<String> whereSplit = new ArrayList<>(Arrays.asList(fromString.split("where")));
-        //System.out.println("whereSplit = " + whereSplit.toString());
-        tableName = whereSplit.get(0).replace(" ","");
-        //System.out.println("tableName = " + tableName);
-        String constraintString = whereSplit.get(1);
-        //System.out.println("constraintString = " + constraintString);
-        ArrayList<String> constraintSplit = new ArrayList<>(Arrays.asList(constraintString.split("\\s+")));
-        //System.out.println("constraintSplit = " + constraintSplit);
-        constraintColumn = constraintSplit.get(1);
-        //System.out.println("constraintColumn = " + constraintColumn);
-        constraintOperator = constraintSplit.get(2);
-        //System.out.println("constraintOperator = " + constraintOperator);
-        constraintValue = constraintSplit.get(3);
-        //System.out.println("constraintValue = " + constraintValue);
+        //System.out.println("fromString = " + fromString);
+
+        /*check if there is a constraint in the query*/
+        if (fromString.contains("where"))
+        {
+            hasConstraint = true;
+            ArrayList<String> whereSplit = new ArrayList<>(Arrays.asList(fromString.split("where")));
+            System.out.println("whereSplit = " + whereSplit.toString());
+            tableName = whereSplit.get(0).replace(" ","");
+            //System.out.println("tableName = " + tableName);
+            String constraintString = whereSplit.get(1);
+            //System.out.println("constraintString = " + constraintString);
+            ArrayList<String> constraintSplit = new ArrayList<>(Arrays.asList(constraintString.split("\\s+")));
+            //System.out.println("constraintSplit = " + constraintSplit);
+            constraintColumn = constraintSplit.get(1);
+            //System.out.println("constraintColumn = " + constraintColumn);
+            constraintOperator = constraintSplit.get(2);
+            //System.out.println("constraintOperator = " + constraintOperator);
+            constraintValue = constraintSplit.get(3);
+            //System.out.println("constraintValue = " + constraintValue);
+        }else{
+            tableName = fromString.replace(" ", "");
+        }
+
         ArrayList<String> selectSplit = new ArrayList<>(Arrays.asList(selectString.split(" ")));
         for (int i = 1; i < selectSplit.size(); i++) {
             columnList.add(selectSplit.get(i).replace(",", ""));
@@ -351,6 +362,7 @@ public class BeaverBase {
            /*pass values on to be printed by printQueryResults*/
             printQueryResults(
                 tableName,
+                hasConstraint,
                 constraintColumn,
                 constraintOperator,
                 constraintValue,
@@ -473,6 +485,7 @@ public class BeaverBase {
     /*print query results from parsed query parameters*/
     public static void printQueryResults(
         String tableName,
+        boolean hasConstraint,
         String constraintColumn,
         String constraintOperator,
         String constraintValue,
@@ -508,8 +521,7 @@ public class BeaverBase {
             table.seek(1);
             int recordCount = table.read();
 
-            /*determine data type of constraint*/
-            String recordConstraintType = dataTypeList.get(constraintOrdinalPosition-1);
+            String recordConstraintType = "";
 
             /*linear search records for those that match our query*/
             for (int i = 1; i <= recordCount; i++) {
@@ -527,26 +539,34 @@ public class BeaverBase {
                 int rowId = table.readInt();
                 int numColumns = table.readByte();
 
-                int recordConstraintOffset = 7 + numColumns; //this will always be the same as a starting point
-                for (int j = 1; j < constraintOrdinalPosition-1; j++) {
-                    //System.out.println("dataTypeList.get(j) = " + dataTypeList.get(j));
-                    recordConstraintOffset+=getContentSize(dataTypeList.get(j)); //accounted for all but the strings
-                    //System.out.println("adding " + getContentSize(dataTypeList.get(j)));
+                int recordConstraintOffset = 0;
 
-                    int columnTypeByte = table.readByte();
-                    //System.out.println("columnTypeByte = " + columnTypeByte);
+                if (hasConstraint){
+                    /*determine data type of constraint*/
+                    recordConstraintType = dataTypeList.get(constraintOrdinalPosition-1);
 
-                    if (columnTypeByte>0xB) { //if we find a TEXT type
-                        recordConstraintOffset+= (columnTypeByte -0xC);
-                        //System.out.println("adding "+(columnTypeByte -0xC));
+                    recordConstraintOffset = 7 + numColumns; //this will always be the same as a starting point
+                    for (int j = 1; j < constraintOrdinalPosition-1; j++) {
+                        //System.out.println("dataTypeList.get(j) = " + dataTypeList.get(j));
+                        recordConstraintOffset+=getContentSize(dataTypeList.get(j)); //accounted for all but the strings
+                        //System.out.println("adding " + getContentSize(dataTypeList.get(j)));
+
+                        int columnTypeByte = table.readByte();
+                        //System.out.println("columnTypeByte = " + columnTypeByte);
+
+                        if (columnTypeByte>0xB) { //if we find a TEXT type
+                            recordConstraintOffset+= (columnTypeByte -0xC);
+                            //System.out.println("adding "+(columnTypeByte -0xC));
+                        }
+                    }
+                    if(recordConstraintType.equals("TEXT")){
+                        textConstraintLength = table.readByte() -0xC;
+                    }
+                    if(constraintColumn.equals("rowid")){
+                        recordConstraintOffset = 2;
                     }
                 }
-                if(recordConstraintType.equals("TEXT")){
-                    textConstraintLength = table.readByte() -0xC;
-                }
-                if(constraintColumn.equals("rowid")){
-                    recordConstraintOffset = 2;
-                }
+
                 table.seek(recordLocation+recordConstraintOffset);
                 //System.out.println("recordLocation = " + recordLocation);
                 //System.out.println("recordConstraintOffset = " + recordConstraintOffset);
@@ -556,7 +576,10 @@ public class BeaverBase {
 
                 //System.out.println("recordConstraintType = " + recordConstraintType);
 
-                if (recordConstraintType.equals("TEXT")) {
+                if (!hasConstraint){ //if it doesn't have any constraints, then everything is a match
+                    foundMatch = true;
+                }
+                else if (recordConstraintType.equals("TEXT")) {
                     byte[] temp = new byte[textConstraintLength];
                     table.read(temp);
                     String actualConstraintValue1 = new String(temp);

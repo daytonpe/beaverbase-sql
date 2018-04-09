@@ -299,7 +299,7 @@ public class BeaverBase {
 
     /*parse query*/
     public static void parseQuery(String queryString) {
-        System.out.println("\tParsing the string:\"" + queryString + "\"");
+        //System.out.println("\tParsing the string:\"" + queryString + "\"");
         ArrayList<String> columnList = new ArrayList<>(); //possibly just the wildcard *
         String tableName;
         String constraintColumn;
@@ -341,18 +341,33 @@ public class BeaverBase {
         ArrayList<String> ordinalPositionList = getTableInformation(tableName, "ordinalPositionList");
         //System.out.println("ordinalPositionList = " + ordinalPositionList.toString());
 
-        /*pass values on to be printed by printQueryResults*/
-        printQueryResults(
-            tableName,
-            constraintColumn,
-            constraintOperator,
-            constraintValue,
-            columnList,
-            columnListActual,
-            notNullList,
-            dataTypeList,
-            ordinalPositionList);
+        /*validate query columns*/
+        if (validateQueryColumns(columnList, columnListActual)) {
+           /*pass values on to be printed by printQueryResults*/
+            printQueryResults(
+                tableName,
+                constraintColumn,
+                constraintOperator,
+                constraintValue,
+                columnList,
+                columnListActual,
+                notNullList,
+                dataTypeList,
+                ordinalPositionList);
+        }
+        else{
+            System.out.println("invalid columns in query");
+        }
+    }
 
+    /*ensure all columnList values are in column list actual*/
+    public static boolean validateQueryColumns(ArrayList<String> columnList, ArrayList<String> columnListActual){
+        for (int i = 0; i < columnList.size(); i++) {
+            if (!columnListActual.contains(columnList.get(i))){
+                return false;
+            }
+        }
+        return true;
     }
 
     /*given a string value of a data type, return the content size*/
@@ -375,10 +390,79 @@ public class BeaverBase {
             case "DATE":
                 return 8;
             case "TEXT":
-                return 1;
+                return 0;
             default:
-                throw new Error("Error: Not a valid data type: "+dataType);
+                throw new Error("Not a valid data type: "+dataType);
         }
+    }
+
+    /*given a string value of a data type, return the content size*/
+    public static int getContentSize(int dataType){
+        if (dataType>0xB) {
+            return 0;
+        }
+        switch (dataType) {
+            case 0x4:
+                return 1;
+            case 0x5:
+                return 2;
+            case 0x6:
+                return 4;
+            case 0x7:
+                return 8;
+            case 0x8:
+                return 4;
+            case 0x9:
+                return 8;
+            case 0xA:
+                return 8;
+            case 0xB:
+                return 8;
+            default:
+                throw new Error("Not a valid data type: "+dataType);
+        }
+    }
+
+    /*convert hex typecodes into string data types*/
+    public static String convertTypeCode(int typeCode){
+        if (typeCode>0xB) {
+            return "TEXT";
+        }
+        switch (typeCode) {
+            case 0x4:
+                return "TINYINT";
+            case 0x5:
+                return "SMALLINT";
+            case 0x6:
+                return "INT";
+            case 0x7:
+                return "BIGINT";
+            case 0x8:
+                return "REAL";
+            case 0x9:
+                return "DOUBLE";
+            case 0xA:
+                return "DATETIME";
+            case 0xB:
+                return "DATE";
+            default:
+                throw new Error("Not a valid type code: "+typeCode);
+        }
+    }
+
+    /*given a subset of columns from query, return a boolean ArrayList of whether to print each column value*/
+    public static ArrayList<Boolean> getBooleanPrintArray(ArrayList<String> columnList, ArrayList<String> columnListActual){
+        ArrayList<Boolean> booleanPrintArray = new ArrayList<>();
+
+        for (int i = 0; i < columnListActual.size(); i++) {
+            if (columnList.contains(columnListActual.get(i))) {
+                booleanPrintArray.add(true);
+            }
+            else{
+                booleanPrintArray.add(false);
+            }
+        }
+        return booleanPrintArray;
     }
 
     /*print query results from parsed query parameters*/
@@ -394,46 +478,264 @@ public class BeaverBase {
         ArrayList<String> ordinalPositionList
         ){
 
-        /*determine offset from start of each record*/
-        /*first determine where it is in ordinal position*/
-        for (int i = 0; i < columnListActual.size(); i++) {
-
+        /*print header*/
+        System.out.println("");
+        for (int i = 0; i < columnList.size(); i++) {
+            System.out.print(String.format("%-16s" , columnList.get(i)));
         }
+        System.out.println("");
+        for (int i = 0; i < columnList.size(); i++) {
+            System.out.print("----------------");
+        }
+        System.out.println("");
 
-        int constraintValueOffset;
+        int textConstraintLength = 0; //only used if type of constraint is TEXT
+
+        /*determine constraint offset from start of each record*/
+
+        /*first determine where constraint is in ordinal position*/
+        int constraintOrdinalPosition = columnListActual.indexOf(constraintColumn)+1;
 
         try{
-            RandomAccessFile beaverbase_tables = new RandomAccessFile("data/user_data/"+tableName+".tbl", "rw");
+            RandomAccessFile table = new RandomAccessFile("data/user_data/"+tableName+".tbl", "rw");
 
             /*determine number of records*/
-            beaverbase_tables.seek(1);
-            int recordCount = beaverbase_tables.read();
+            table.seek(1);
+            int recordCount = table.read();
+
+            /*determine data type of constraint*/
+            String recordConstraintType = dataTypeList.get(constraintOrdinalPosition-1);
 
             /*linear search records for those that match our query*/
             for (int i = 1; i <= recordCount; i++) {
 
                 /*get location of next title*/
-                beaverbase_tables.seek(8+((i-1)*2));
-                int recordLocation = beaverbase_tables.readShort();
+                table.seek(8+((i-1)*2));
+                int recordLocation = table.readShort();
+                //System.out.println("recordLocation = " + recordLocation);
+
+                /*seek to record*/
+                table.seek(recordLocation);
+
+                /*save values that are always at same offsets*/
+                int recordPayloadLength = table.readShort();
+                int rowId = table.readInt();
+                int numColumns = table.readByte();
+
+                int recordConstraintOffset = 7 + numColumns; //this will always be the same as a starting point
+                for (int j = 1; j < constraintOrdinalPosition-1; j++) {
+                    //System.out.println("dataTypeList.get(j) = " + dataTypeList.get(j));
+                    recordConstraintOffset+=getContentSize(dataTypeList.get(j)); //accounted for all but the strings
+                    //System.out.println("adding " + getContentSize(dataTypeList.get(j)));
+
+                    int columnTypeByte = table.readByte();
+                    //System.out.println("columnTypeByte = " + columnTypeByte);
+
+                    if (columnTypeByte>0xB) { //if we find a TEXT type
+                        recordConstraintOffset+= (columnTypeByte -0xC);
+                        //System.out.println("adding "+(columnTypeByte -0xC));
+                    }
+                }
+                if(recordConstraintType.equals("TEXT")){
+                    textConstraintLength = table.readByte() -0xC;
+                }
+                if(constraintColumn.equals("rowid")){
+                    recordConstraintOffset = 2;
+                }
+                table.seek(recordLocation+recordConstraintOffset);
+                //System.out.println("recordLocation = " + recordLocation);
+                //System.out.println("recordConstraintOffset = " + recordConstraintOffset);
+
+                /*check if record matches where condition*/
+                boolean foundMatch = false;
+
+                //System.out.println("recordConstraintType = " + recordConstraintType);
+
+                if (recordConstraintType.equals("TEXT")) {
+                    byte[] temp = new byte[textConstraintLength];
+                    table.read(temp);
+                    String actualConstraintValue1 = new String(temp);
+                    //System.out.println("actualConstraintValue1 = "+actualConstraintValue1);
+                    //System.out.println("actualConstraintValue1 =? constraintValue : " + actualConstraintValue1 +" =? "+constraintValue);
+                    if (actualConstraintValue1.equals(constraintValue)) {
+                        foundMatch = true;
+                    }
+                }
+                else{
+                    switch (recordConstraintType) {
+                        case "TINYINT":
+                            int actualConstraintValue2 = table.readByte();
+                            //System.out.println("actualConstraintValue2 = "+actualConstraintValue2);
+                            if (actualConstraintValue2 == Integer.parseInt(constraintValue)) {
+                                foundMatch = true;
+                            }
+                            break;
+                        case "SMALLINT":
+                            int actualConstraintValue3 = table.readShort();
+                            //System.out.println("actualConstraintValue3 = "+actualConstraintValue3);
+                            if (actualConstraintValue3 == Integer.parseInt(constraintValue)) {
+                                foundMatch = true;
+                            }
+                            break;
+                        case "INT":
+                            //System.out.println("pointer: "+table.getFilePointer());
+                            int actualConstraintValue4 = table.readInt();
+                            //System.out.println("actualConstraintValue4 = "+actualConstraintValue4);
+                            //System.out.println("actualConstraintValue4 =? constraintValue :" + actualConstraintValue4 +" =? "+constraintValue);
+                            if (actualConstraintValue4 == Integer.parseInt(constraintValue)) {
+                                foundMatch = true;
+                            }
+                            break;
+                        case "BIGINT":
+                            double actualConstraintValue5 = table.readLong();
+                            //System.out.println("actualConstraintValue5 = "+actualConstraintValue5);
+                            if (actualConstraintValue5 == Double.parseDouble(constraintValue)){
+                                foundMatch = true;
+                            }
+                            break;
+                        case "REAL":
+                            int actualConstraintValue6 = table.readInt();
+                            //System.out.println("actualConstraintValue6 = "+actualConstraintValue6);
+                            if (actualConstraintValue6 == Integer.parseInt(constraintValue)) {
+                                foundMatch = true;
+                            }
+                            break;
+                        case "DOUBLE":
+                            //System.out.println("pointer: "+table.getFilePointer());
+                            double actualConstraintValue7 = table.readDouble();
+                            //System.out.println("actualConstraintValue7 = "+actualConstraintValue7);
+                            //System.out.println("actualConstraintValue7 =? constraintValue :" + actualConstraintValue7 +" =? "+constraintValue);
+                            if (actualConstraintValue7 == Double.parseDouble(constraintValue)){
+                                foundMatch = true;
+                            }
+                            break;
+                        case "DATETIME":
+                            double actualConstraintValue8 = table.readLong();
+                            //System.out.println("actualConstraintValue8 = "+actualConstraintValue8);
+                            if (actualConstraintValue8 == Double.parseDouble(constraintValue)){
+                                foundMatch = true;
+                            }
+                            break;
+                        case "DATE":
+                            double actualConstraintValue9 = table.readLong();
+                            //System.out.println("actualConstraintValue9 = "+actualConstraintValue9);
+                            if (actualConstraintValue9 == Double.parseDouble(constraintValue)){
+                                foundMatch = true;
+                            }
+                            break;
+                        default:
+                            throw new Error("Not a valid data type: "+recordConstraintType);
+                    }
+                }
+
+                //System.out.println("foundMatch = " + foundMatch);
+
+                /*print the columns that match*/
+                if (foundMatch) {
+                    ArrayList <Boolean> booleanPrintList = getBooleanPrintArray(columnList, columnListActual);
+                    ArrayList <Integer> dataTypesHexList = new ArrayList<>();
+                    //System.out.println("booleanPrintList= " + booleanPrintList.toString());
+
+                    /*since in a different place, we need to print rowid first if applicable*/
+                    if (booleanPrintList.get(0)) {
+                        System.out.print(rowId+"\t\t");
+                    }
+
+                    /* we will read the record types and record locations
+                    concurrently so we know how many bytes to print and in
+                    what format. Thus we need to initialize two starting positions */
+
+                    /*first where the data types are stored in single byte format*/
+                    int dataTypesPointer = recordLocation+7;
+                    /*second where the record payload actually starts*/
+                    int recordPayloadPointer = recordLocation+7+numColumns;
 
 
 
-                /*get rowId*/
-                beaverbase_tables.seek(recordLocation);
-                int rowId = beaverbase_tables.readInt();
+                    table.seek(recordPayloadPointer);
+                    //System.out.println("record payload start = " + (recordLocation+7+numColumns));
+                    for (int j = 1; j < booleanPrintList.size(); j++) {
+
+                        /*get the hex value of the datatype*/
+                        table.seek(dataTypesPointer);
+                        int dataType = table.readByte();
+
+                        if (booleanPrintList.get(j)) {
+                            /*print it based on what type it is*/
+                            table.seek(recordPayloadPointer);
+                            //System.out.println("dataType = " + dataType);
+                            //System.out.println("convertTypeCode(dataType) = " + convertTypeCode(dataType));
+                            switch (convertTypeCode(dataType)) {
+                                case "TINYINT":
+                                    int printValue2 = table.readByte();
+                                    System.out.print(printValue2 + "\t\t");
+                                    System.out.print(String.format("%-16s" , printValue2));
+                                    break;
+                                case "SMALLINT":
+                                    int printValue3 = table.readShort();
+                                    System.out.print(String.format("%-16s" , printValue3));
+                                    break;
+                                case "INT":
+                                    int printValue4 = table.readInt();
+                                    System.out.print(String.format("%-16s" , printValue4));
+                                    break;
+                                case "BIGINT":
+                                    double printValue5 = table.readLong();
+                                    System.out.print(String.format("%-16s" , printValue5));
+                                    break;
+                                case "REAL":
+                                    int printValue6 = table.readInt();
+                                    System.out.print(String.format("%-16s" , printValue6));
+                                    break;
+                                case "DOUBLE":
+                                    double printValue7 = table.readDouble();
+                                    System.out.print(String.format("%-16s" , printValue7));
+                                    break;
+                                case "DATETIME":
+                                    double printValue8 = table.readLong();
+                                    System.out.print(String.format("%-16s" , printValue8));
+                                    break;
+                                case "DATE":
+                                    double printValue9 = table.readLong();
+                                    System.out.print(String.format("%-16s" , printValue9));
+                                    break;
+                                case "TEXT":
+                                    byte[] temp = new byte[dataType-0xC];
+                                    table.read(temp);
+                                    String printValue10 = new String(temp);
+                                    System.out.print(String.format("%-16s" , printValue10));
+                                    break;
+                                default:
+                                    throw new Error("Not a valid data type: "+recordConstraintType);
+                            }
+                        }
+
+                        /*increment our pointers*/
+                        dataTypesPointer++; //simple increment since all singly bytes
+                        if (dataType>0xB) { //more complicated when content size is variable
+                            recordPayloadPointer+=dataType-0xC; //if text
+                        }else{
+                            recordPayloadPointer+=getContentSize(dataType); //if not text
+                        }
+
+                    }
+
+                    System.out.println();
+                }
 
 
 
-                /*close out of table*/
-                beaverbase_tables.close();
-                System.out.println("");
+
+
             }
+            /*close out of table*/
+                table.close();
 
         }
         catch(IOException e) {
             System.out.println(e);
         }
-
+        System.out.println();
     }
 
     /*insert into table*/

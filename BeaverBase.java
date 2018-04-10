@@ -692,6 +692,14 @@ public class BeaverBase {
         return true;
     }
 
+    /*ensure column value (singular) is in column list actual*/
+    public static boolean validateQueryColumns(String column, ArrayList<String> columnListActual){
+        if (!columnListActual.contains(column)){
+            return false;
+        }
+        return true;
+    }
+
     /*given a string value of a data type, return the content size*/
     public static int getContentSize(String dataType){
         switch (dataType) {
@@ -1913,13 +1921,52 @@ public class BeaverBase {
             tableName = leftSplit.get(2).replace(" ", "");
             //System.out.println("tableName = " + tableName);
 
-        }else{
+        } else{
             /*we delete everything!*/
             ArrayList<String> deleteStringSplit = new ArrayList<>(Arrays.asList(deleteString.split(" ")));
             tableName = deleteStringSplit.get(2).replace(" ", "");
             //System.out.println("tableName = " + tableName);
         }
 
+        /*retrieve table information about columns*/
+        ArrayList<String> columnListActual = getTableInformation(tableName, "columnList");
+        System.out.println("columnListActual = " + columnListActual.toString());
+        ArrayList<String> notNullList = getTableInformation(tableName, "nullList");
+        System.out.println("notNullList = " + notNullList.toString());
+        ArrayList<String> dataTypeList = getTableInformation(tableName, "dataTypeList");
+        System.out.println("dataTypeList = " + dataTypeList.toString());
+
+
+
+        /*validate query columns*/
+        if (!hasConstraint || validateQueryColumns(constraintColumn, columnListActual)) {
+           /*pass values on to be printed by printQueryResults*/
+            deleteRecords(
+                hasConstraint,
+                tableName,
+                constraintColumn,
+                constraintOperator,
+                constraintValue,
+                columnListActual,
+                notNullList,
+                dataTypeList);
+        }
+        else{
+            System.out.println("invalid columns in query");
+        }
     }
 
+    /*delete records from passed delete parameters*/
+    public static void deleteRecords(
+        boolean hasConstraint,
+        String tableName,
+        String constraintColumn,
+        String constraintOperator,
+        String constraintValue,
+        ArrayList<String> columnListActual,
+        ArrayList<String> notNullList,
+        ArrayList<String> dataTypeList
+        ){
+        System.out.println("\nDELETE RECORDS CALLED\n");
+    }
 }

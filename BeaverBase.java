@@ -887,19 +887,18 @@ public class BeaverBase {
             String recordConstraintType = "";
 
             /*linear search records for those that match our query*/
-            for (int i = 1; i <= recordCount; i++) {
 
+            while(recordsVisited <= recordCount){
+                recordsVisited++;
                 /*get location of next title*/
-                table.seek(8+((i-1)*2));
+                table.seek(8+((recordsVisited-1)*2));
                 int recordLocation = table.readShort();
 
-                /*check if record has been deleted*/
+                /*check if record has been deleted, if not increment the recordsVisited as we will now visit this record*/
                 if (recordLocation == -1)
                     continue;
 
-                System.out.println("i = " + i);
 
-                //System.out.println("recordLocation = " + recordLocation);
 
                 /*seek to record*/
                 table.seek(recordLocation);
@@ -1025,6 +1024,7 @@ public class BeaverBase {
 
                 /*print the columns that match*/
                 if (foundMatch) {
+
                     ArrayList <Boolean> booleanPrintList = getBooleanPrintArray(columnList, columnListActual);
                     ArrayList <Integer> dataTypesHexList = new ArrayList<>();
                     //System.out.println("booleanPrintList= " + booleanPrintList.toString());

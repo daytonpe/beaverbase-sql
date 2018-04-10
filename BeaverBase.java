@@ -389,15 +389,20 @@ public class BeaverBase {
             table.seek(1);
             int recordCount = table.read();
 
+            /*
+            recordCount will change if we delete a record. So we can't use it for looping through a page
+            deleted record pointers will count in our looping value.
+            */
+            int recordsVisited = 0;
+
             /*linear search records for those that match our query*/
-            for (int i = 1; i <= recordCount; i++) {
-
+            while(recordsVisited < recordCount){
+                recordsVisited++;
                 /*get location of next title*/
-                table.seek(8+((i-1)*2));
+                table.seek(8+((recordsVisited-1)*2));
                 int recordLocation = table.readShort();
-                //System.out.println("recordLocation = " + recordLocation);
 
-                /*check if record has been deleted*/
+                /*checkpoint -- if record has been deleted, do not continue*/
                 if (recordLocation == -1)
                     continue;
 
@@ -888,7 +893,7 @@ public class BeaverBase {
 
             /*linear search records for those that match our query*/
 
-            while(recordsVisited <= recordCount){
+            while(recordsVisited < recordCount){
                 recordsVisited++;
                 /*get location of next title*/
                 table.seek(8+((recordsVisited-1)*2));
@@ -1147,13 +1152,11 @@ public class BeaverBase {
 
         /*retrieve table information about columns*/
         ArrayList<String> columnListActual = getTableInformation(tableName, "columnList");
-        //System.out.println("columnListActual = " + columnListActual.toString());
+        System.out.println("columnListActual = " + columnListActual.toString());
         ArrayList<String> notNullList = getTableInformation(tableName, "nullList");
-        //System.out.println("notNullList = " + notNullList.toString());
+        System.out.println("notNullList = " + notNullList.toString());
         ArrayList<String> dataTypeList = getTableInformation(tableName, "dataTypeList");
-        //System.out.println("dataTypeList = " + dataTypeList.toString());
-        ArrayList<String> ordinalPositionList = getTableInformation(tableName, "ordinalPositionList");
-        //System.out.println("ordinalPositionList = " + ordinalPositionList);
+        System.out.println("dataTypeList = " + dataTypeList.toString());
 
         /*ensure columns and null properties match*/
         if(columnList.size() != columnListActual.size())
@@ -1338,11 +1341,23 @@ public class BeaverBase {
             beaverbase_tables.seek(1);
             int recordCount = beaverbase_tables.read();
 
-            for (int i = 1; i <= recordCount; i++) {
+            /*
+            recordCount will change if we delete a record. So we can't use it for looping through a page
+            deleted record pointers will count in our looping value.
+            */
+            int recordsVisited = 0;
+
+            while(recordsVisited < recordCount){
+
+                recordsVisited++;
 
                 /*get location of next title*/
-                beaverbase_tables.seek(8+((i-1)*2));
+                beaverbase_tables.seek(8+((recordsVisited-1)*2));
                 int recordLocation = beaverbase_tables.readShort();
+
+                /*check if record has been deleted, if not increment the recordsVisited as we will now visit this record*/
+                if (recordLocation == -1)
+                    continue;
 
                 /*get rowId*/
                 beaverbase_tables.seek(recordLocation+2);
@@ -1814,14 +1829,18 @@ public class BeaverBase {
             RandomAccessFile table = new RandomAccessFile("data/catalog/beaverbase_columns.tbl", "rw");
             table.seek(1);
             int recordCount = table.read();
-            //System.out.println("recordCount = " + recordCount);
+
+            /*
+            recordCount will change if we delete a record. So we can't use it for looping through a page
+            deleted record pointers will count in our looping value.
+            */
+            int recordsVisited = 0;
 
             /*loop through the records in the beaverbase_columnspage (linearly)*/
-            for (int i = 1; i <= recordCount; i++) {
-
-                /*find location of next record, read it*/
-                table.seek(8+((i-1)*2));
-                //System.out.println("seeking to: " + (8+((i-1)*2)) );
+            while(recordsVisited < recordCount){
+                recordsVisited++;
+                /*get location of next title*/
+                table.seek(8+((recordsVisited-1)*2));
                 int recordLocation = table.readShort();
                 //System.out.println("recordLocation = " + recordLocation);
 

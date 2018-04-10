@@ -69,6 +69,7 @@ public class BeaverBase {
             System.out.println("\nType \"help;\" to display supported commands.");
             System.out.println(line("-",80));
     }
+
     public static String line(String s,int num) {
             String a = "";
             for(int i=0;i<num;i++) {
@@ -76,12 +77,15 @@ public class BeaverBase {
             }
             return a;
     }
+
     public static void printCmd(String s) {
             System.out.println("\n\t" + s + "\n");
     }
+
     public static void printDef(String s) {
             System.out.println("\t\t" + s);
     }
+
     public static void help() {
         out.println(line("*",80));
         out.println("SUPPORTED COMMANDS\n");
@@ -105,16 +109,20 @@ public class BeaverBase {
         out.println("\tExit the program.\n");
         out.println(line("*",80));
     }
+
     public static String getVersion() {
             return version;
     }
+
     public static String getCopyright() {
             return copyright;
     }
+
     public static void displayVersion() {
             System.out.println("BeaverBaseLite Version " + getVersion());
             System.out.println(getCopyright());
     }
+
     public static void parseUserCommand (String userCommand) {
 
         /* commandTokens is an array of Strings that contains one token per array element
@@ -278,18 +286,10 @@ public class BeaverBase {
                     beaverbaseColumnsCatalog.close();
             }
             catch (Exception e) {
-                    out.println("Unable to create the database_columns file");
-                    out.println(e);
+                out.println("Unable to create the database_columns file");
+                out.println(e);
             }
-    }
-
-    /**
-     *  Stub method for dropping tables
-     *  @param dropTableString is a String of the user input
-     */
-    public static void dropTable(String dropTableString) {
-        System.out.println("STUB: This is the dropTable method.");
-        System.out.println("\tParsing the string:\"" + dropTableString + "\"");
+            System.out.println("");
     }
 
     /**
@@ -359,7 +359,7 @@ public class BeaverBase {
                 dataTypeList);
         }
         else{
-            System.out.println("invalid columns in query");
+            System.out.println("\ninvalid columns in query\n");
         }
     }
 
@@ -389,6 +389,10 @@ public class BeaverBase {
             table.seek(1);
             int recordCount = table.read();
 
+            /*if record count == 0 then then we can just break*/
+            if (recordCount == 0)
+                return;
+
             /*
             recordCount will change if we delete a record. So we can't use it for looping through a page
             deleted record pointers will count in our looping value.
@@ -396,7 +400,7 @@ public class BeaverBase {
             int recordsVisited = 0;
 
             /*linear search records for those that match our query*/
-            while(recordsVisited < recordCount){
+            while(recordsVisited <= recordCount){
                 recordsVisited++;
                 /*get location of next title*/
                 table.seek(8+((recordsVisited-1)*2));
@@ -859,7 +863,7 @@ public class BeaverBase {
         ){
 
         /*print header*/
-        System.out.println("");
+        System.out.println();
         for (int i = 0; i < columnList.size(); i++) {
             System.out.print(String.format("%-16s" , columnList.get(i)));
         }
@@ -883,11 +887,17 @@ public class BeaverBase {
             table.seek(1);
             int recordCount = table.read();
 
+            /*if record count == 0 then then we can just break*/
+            if (recordCount == 0){
+                System.out.println();
+                return;
+            }
             /*
             recordCount will change if we delete a record. So we can't use it for looping through a page
             deleted record pointers will count in our looping value.
             */
             int recordsVisited = 0;
+
 
             String recordConstraintType = "";
 
@@ -895,7 +905,9 @@ public class BeaverBase {
 
             while(recordsVisited < recordCount){
                 recordsVisited++;
+
                 /*get location of next title*/
+
                 table.seek(8+((recordsVisited-1)*2));
                 int recordLocation = table.readShort();
 
@@ -1152,11 +1164,11 @@ public class BeaverBase {
 
         /*retrieve table information about columns*/
         ArrayList<String> columnListActual = getTableInformation(tableName, "columnList");
-        System.out.println("columnListActual = " + columnListActual.toString());
+        //System.out.println("columnListActual = " + columnListActual.toString());
         ArrayList<String> notNullList = getTableInformation(tableName, "nullList");
-        System.out.println("notNullList = " + notNullList.toString());
+        //System.out.println("notNullList = " + notNullList.toString());
         ArrayList<String> dataTypeList = getTableInformation(tableName, "dataTypeList");
-        System.out.println("dataTypeList = " + dataTypeList.toString());
+        //System.out.println("dataTypeList = " + dataTypeList.toString());
 
         /*ensure columns and null properties match*/
         if(columnList.size() != columnListActual.size())
@@ -1341,6 +1353,10 @@ public class BeaverBase {
             beaverbase_tables.seek(1);
             int recordCount = beaverbase_tables.read();
 
+            /*if record count == 0 then then we can just break*/
+            if (recordCount == 0)
+                return;
+
             /*
             recordCount will change if we delete a record. So we can't use it for looping through a page
             deleted record pointers will count in our looping value.
@@ -1381,6 +1397,7 @@ public class BeaverBase {
         catch(IOException e) {
             System.out.println(e);
         }
+        System.out.println();
     }
 
     /*create new table*/
@@ -1392,7 +1409,6 @@ public class BeaverBase {
 
         /* Define table file name */
         String tableFileName = "data/user_data/"+tableName + ".tbl";
-
 
         /*1) Parse the COL_NAMES and DATA_TYPES from the createTableTokens Variable*/
         int payloadSize = 0; //number of bytes in the payload
@@ -1700,7 +1716,7 @@ public class BeaverBase {
             beaverbase_tables.writeByte((int)textTypeCode); //rowid is an INT --> Serial Typecode 6
             beaverbase_tables.write(tableName.getBytes());
             System.out.println("");
-            System.out.println(tableName+" created\n");
+            System.out.println(tableName+" table created\n");
 
             /*close connection*/
             beaverbase_tables.close();
@@ -1830,6 +1846,8 @@ public class BeaverBase {
             table.seek(1);
             int recordCount = table.read();
 
+
+
             /*
             recordCount will change if we delete a record. So we can't use it for looping through a page
             deleted record pointers will count in our looping value.
@@ -1838,11 +1856,16 @@ public class BeaverBase {
 
             /*loop through the records in the beaverbase_columnspage (linearly)*/
             while(recordsVisited < recordCount){
+                //System.out.println("recordsVisited = " + recordsVisited);
                 recordsVisited++;
                 /*get location of next title*/
                 table.seek(8+((recordsVisited-1)*2));
                 int recordLocation = table.readShort();
-                //System.out.println("recordLocation = " + recordLocation);
+                //System.out.println("recordLocation = " + recordLocation
+
+                /*checkpoint -- if record has been deleted, do not continue*/
+                if (recordLocation == -1)
+                    continue;
 
                 /*locate, read, and save values of column types*/
                 table.seek(recordLocation+7); //table name
@@ -1988,7 +2011,7 @@ public class BeaverBase {
                 dataTypeList);
         }
         else{
-            System.out.println("invalid columns in query");
+            System.out.println("\ninvalid columns in query\n");
         }
     }
 
@@ -2010,19 +2033,50 @@ public class BeaverBase {
         int textConstraintLength = 0; //only used if type of constraint is TEXT
 
         try{
-            RandomAccessFile table = new RandomAccessFile("data/user_data/"+tableName+".tbl", "rw");
+
+            RandomAccessFile table;
+
+            /*if we are deleting from the drop table method, we will be deleting from catalog rather than user_data*/
+            if (tableName.equals("beaverbase_columns") || tableName.equals("beaverbase_tables")) {
+                table = new RandomAccessFile("data/catalog/"+tableName+".tbl", "rw");
+            }
+            else{
+                table = new RandomAccessFile("data/user_data/"+tableName+".tbl", "rw");
+            }
+
+            System.out.println("tableName = " + tableName);
 
             /*determine number of records*/
             table.seek(1);
             int recordCount = table.read();
 
-            /*linear search records for those that match our query*/
-            for (int i = 1; i <= recordCount; i++) {
+            /*get a copy for looping purposes*/
+            table.seek(1);
+            int originalRecordCount = table.read();
 
+            /*if record count == 0 then then we can just break*/
+            if (recordCount == 0)
+                return;
+
+            /*
+            recordCount will change if we delete a record. So we can't use it for looping through a page
+            deleted record pointers will count in our looping value.
+            */
+            int recordsVisited = 0;
+            System.out.println("originalRecordCount = " + originalRecordCount);
+            /*linear search records for those that match our query*/
+            while(recordsVisited < originalRecordCount){
+                System.out.println("recordsVisited = " + recordsVisited);
+                recordsVisited++;
                 /*get location of next title*/
-                int tablePointer = 8+((i-1)*2);
+                int tablePointer = 8+((recordsVisited-1)*2);
                 table.seek(tablePointer);
                 int recordLocation = table.readShort();
+                System.out.println("recordLocation = " + recordLocation);
+
+                /*checkpoint -- if record has been deleted, do not continue*/
+                if (recordLocation == -1)
+                    continue;
 
                 /*seek to record*/
                 table.seek(recordLocation);
@@ -2072,8 +2126,8 @@ public class BeaverBase {
                     byte[] temp = new byte[textConstraintLength];
                     table.read(temp);
                     String actualConstraintValue1 = new String(temp);
-                    //System.out.println("actualConstraintValue1 = "+actualConstraintValue1);
-                    //System.out.println("actualConstraintValue1 =? constraintValue : " + actualConstraintValue1 +" =? "+constraintValue);
+                    System.out.println("actualConstraintValue1 =? constraintValue : " + actualConstraintValue1 +" =? "+constraintValue);
+
                     /* Test if we match constraint depending on constraint operator.
                     For TEXT data type only != and = are sensical */
                     switch (constraintOperator) {
@@ -2171,5 +2225,106 @@ public class BeaverBase {
         catch(IOException e) {
             System.out.println(e);
         }
+        System.out.println();
+    }
+
+    /*drop table*/
+    public static void dropTable(String dropTableString){
+
+        /*parse out the table name*/
+        ArrayList<String> fromSplit = new ArrayList<>(Arrays.asList(dropTableString.split(" ")));
+        String tableName = fromSplit.get(2).replace(" ", "");
+
+        /*delete files associated with this tableName*/
+
+        /*TODO need to loop*/
+        File file = new File("data/user_data/"+tableName+".tbl");
+
+        if(file.delete())
+        {
+            System.out.println("File deleted successfully");
+        }
+        else
+        {
+            System.out.println("Failed to delete the file");
+        }
+
+        /*delete relevent records from beaverbase tables*/
+        /*first set up our parameters for deleteRecords*/
+        ArrayList<String> columnListActualTables = new ArrayList<>();
+        columnListActualTables.add("rowid");
+        columnListActualTables.add("table_name");
+
+        System.out.println("columnListActualTables = " + columnListActualTables.toString());
+
+        ArrayList<String> notNullListTables = new ArrayList<>();
+        notNullListTables.add("YES");
+        notNullListTables.add("YES");
+
+        ArrayList<String> dataTypeListTables = new ArrayList<>();
+        dataTypeListTables.add("INT");
+        dataTypeListTables.add("TEXT");
+
+        System.out.println("dataTypeListTables = " + dataTypeListTables.toString());
+
+        /*then actually purging from beaverbase_tables*/
+        deleteRecords(
+            true, //has constraint
+            "beaverbase_tables",
+            "table_name", //constraintColumn
+            "=", //constraintOperator
+            tableName, //constraintValue
+            columnListActualTables,
+            notNullListTables,
+            dataTypeListTables
+        );
+
+//        boolean hasConstraint,
+//        String tableName,
+//        String constraintColumn,
+//        String constraintOperator,
+//        String constraintValue,
+//        ArrayList<String> columnListActual,
+//        ArrayList<String> notNullList,
+//        ArrayList<String> dataTypeList
+
+        /*delete relevent records from beaverbase_columns*/
+        /*first set up our parameters for deleteRecords*/
+        ArrayList<String> columnListActualColumns = new ArrayList<>();
+        columnListActualColumns.add("rowid");
+        columnListActualColumns.add("table_name");
+        columnListActualColumns.add("column_name");
+        columnListActualColumns.add("data_type");
+        columnListActualColumns.add("ordinal_position");
+        columnListActualColumns.add("is_nullable");
+        System.out.println("columnListActualColumns = " + columnListActualColumns.toString());
+
+        ArrayList<String> notNullListColumns = new ArrayList<>();
+        for (int i = 0; i < 6; i++)
+           notNullListColumns.add("YES");
+        System.out.println("notNullListColumns = " + notNullListColumns.toString());
+
+        ArrayList<String> dataTypeListColumns = new ArrayList<>();
+        dataTypeListColumns.add("INT");
+        dataTypeListColumns.add("TEXT");
+        dataTypeListColumns.add("TEXT");
+        dataTypeListColumns.add("TEXT");
+        dataTypeListColumns.add("TINYINT");
+        dataTypeListColumns.add("TEXT");
+
+        System.out.println("dataTypeListColumns = " + dataTypeListColumns.toString());
+
+        /*then actually purging from beaverbase_columns*/
+        deleteRecords(
+            true, //has constraint
+            "beaverbase_columns",
+            "table_name", //constraintColumn
+            "=", //constraintOperator
+            tableName, //constraintValue
+            columnListActualColumns,
+            notNullListColumns,
+            dataTypeListColumns
+        );
+
     }
 }

@@ -122,7 +122,7 @@ public class BeaverBase {
          * The other tokens can be used to pass relevant parameters to each command-specific
          * method inside each case statement */
         // String[] commandTokens = userCommand.split(" ");
-        ArrayList<String> commandTokens = new ArrayList<String>(Arrays.asList(userCommand.split(" ")));
+        ArrayList<String> commandTokens = new ArrayList<>(Arrays.asList(userCommand.split(" ")));
 
 
         /*
@@ -160,6 +160,9 @@ public class BeaverBase {
                 break;
             case "insert":
                 parseInsert(userCommand);
+                break;
+            case "delete":
+                parseDelete(userCommand);
                 break;
             case "exit":
                 isExit = true;
@@ -1878,6 +1881,45 @@ public class BeaverBase {
                 System.out.println("You have entered an invalid request: \"" + request + "\"");
         }
         return null;
+    }
+
+    /*parse delete*/
+    public static void parseDelete(String deleteString){
+        boolean hasConstraint = false;
+        String tableName;
+        String constraintColumn = null;
+        String constraintOperator = null;
+        String constraintValue = null;
+
+        /*check if there is a constraint in the query*/
+        if (deleteString.contains("where"))
+        {
+            hasConstraint = true;
+            ArrayList<String> whereSplit = new ArrayList<>(Arrays.asList(deleteString.split("where")));
+            //System.out.println("whereSplit = " + whereSplit.toString());
+
+            /*parse constraint*/
+            ArrayList<String> rightSplit = new ArrayList<>(Arrays.asList(whereSplit.get(1).split(" ")));
+            constraintColumn = rightSplit.get(1).replace(" ", "");
+            //System.out.println("constraintColumn = " + constraintColumn);
+            constraintOperator = rightSplit.get(2).replace(" ", "");
+            //System.out.println("constraintOperator = " + constraintOperator);
+            constraintValue = rightSplit.get(3).replace(" ", "");
+            //System.out.println("constraintValue = " + constraintValue);
+
+            /*parse tableName*/
+            ArrayList<String> leftSplit = new ArrayList<>(Arrays.asList(whereSplit.get(0).split(" ")));
+            //System.out.println("leftSplit = " + leftSplit.toString());
+            tableName = leftSplit.get(2).replace(" ", "");
+            //System.out.println("tableName = " + tableName);
+
+        }else{
+            /*we delete everything!*/
+            ArrayList<String> deleteStringSplit = new ArrayList<>(Arrays.asList(deleteString.split(" ")));
+            tableName = deleteStringSplit.get(2).replace(" ", "");
+            //System.out.println("tableName = " + tableName);
+        }
+
     }
 
 }

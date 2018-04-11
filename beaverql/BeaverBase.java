@@ -451,7 +451,6 @@ public class BeaverBase {
                     recordConstraintOffset = 2;
                 }
 
-
                 table.seek(recordLocation+recordConstraintOffset);
 
                 /*check if record matches where condition*/
@@ -606,9 +605,20 @@ public class BeaverBase {
                         case "TEXT":
                             //table.write(changeValue.getBytes());
                             /*since text size is variable, lets delete the record, and then reinsert the updated value*/
-                            parseDelete("DELETE FROM "+ tableName + "where rowid = " +recordRowId + ";");
-                            System.out.println("deleted record with rowid "+ recordRowId);
-                            System.out.println("This method is stubbed out because changing TEXT keys is hard");
+
+                            table.seek(recordLocation);
+                            int recordPayload = table.readShort();
+                            byte[] updateRecord = new byte[(7+numColumns +recordPayload)];
+                            table.read(updateRecord);
+
+                            System.out.println("delete from "+ tableName + " where rowid = " + Integer.toString(recordRowId));
+
+                            String deleteCommand = "delete from "+ tableName + " where rowid = " + Integer.toString(recordRowId);
+                            parseDelete(deleteCommand);
+                            insertByteArray(updateRecord, tableName);
+
+                            System.out.println("FINGERS CROSSED!");
+
                             break;
                         default:
                             throw new Error("Not a valid data type: "+recordConstraintType);
@@ -1339,6 +1349,65 @@ public class BeaverBase {
             /*add record location to list*/
             int recordLocationPosition = 8+((recordCount-1)*2);
             table.seek(recordLocationPosition);
+            table.writeShort(newStartOfContent);
+
+            table.close();
+        }
+        catch(IOException e) {
+            System.out.println(e);
+        }
+    }
+
+    /*insert byte array into table -- helper method for update*/
+    public static void insertByteArray(byte[] record, String tableName) {
+        /*connect to correct table page*/
+
+        int payloadLength = record.length;
+        System.out.println("payloadLength = " + payloadLength);
+
+        try{
+            String tablePath = "data/user_data/"+tableName+".tbl";
+            RandomAccessFile table = new RandomAccessFile(tablePath, "rw");
+            table.seek(1);
+            int recordCount = table.read();
+
+            /*update the record count*/
+            recordCount++;
+            table.seek(1);
+            table.writeByte(recordCount);
+
+            int lastRecordLocation;
+            if (recordCount == 0) {
+                lastRecordLocation = (int) pageSize;
+            }
+            else{
+                table.seek(2);
+                lastRecordLocation = table.readShort();
+            }
+
+            /*seek to correct location and write payload*/
+            int newStartOfContent = lastRecordLocation - payloadLength;
+
+            /*update start of content*/
+            table.seek(2);
+            table.writeShort(newStartOfContent);
+
+            table.seek(newStartOfContent);
+
+            table.write(record);
+
+            /*add record location to list*/
+
+            int recordPointer = 6;
+            int recordLocation;
+            do{
+                recordPointer+=2;
+                table.seek(recordPointer);
+                recordLocation = table.readShort();
+            }while(recordLocation!=0);
+
+
+            table.seek(recordPointer);
             table.writeShort(newStartOfContent);
 
             table.close();

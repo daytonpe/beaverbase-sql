@@ -608,16 +608,16 @@ public class BeaverBase {
 
                             table.seek(recordLocation);
                             int recordPayload = table.readShort();
+                            System.out.println("recordPayload = " + recordPayload);
                             byte[] updateRecord = new byte[(7+numColumns +recordPayload)];
+                            table.seek(recordLocation);
                             table.read(updateRecord);
 
                             System.out.println("delete from "+ tableName + " where rowid = " + Integer.toString(recordRowId));
 
                             String deleteCommand = "delete from "+ tableName + " where rowid = " + Integer.toString(recordRowId);
                             parseDelete(deleteCommand);
-                            insertByteArray(updateRecord, tableName);
-
-                            System.out.println("FINGERS CROSSED!");
+                            insertByteArray(updateRecord, tableName, recordPayload);
 
                             break;
                         default:
@@ -680,7 +680,7 @@ public class BeaverBase {
 
         /*if the table from which we are qerying doesn't exist, break*/
         if(!tableExists(tableName)){
-            System.out.println("\n"+tableName + " does not exist.\n");
+            System.out.println(tableName + " does not exist.\n");
             return;
         }
 
@@ -1359,11 +1359,12 @@ public class BeaverBase {
     }
 
     /*insert byte array into table -- helper method for update*/
-    public static void insertByteArray(byte[] record, String tableName) {
+    public static void insertByteArray(byte[] record, String tableName, int recordPayloadLength) {
         /*connect to correct table page*/
 
         int payloadLength = record.length;
         System.out.println("payloadLength = " + payloadLength);
+        System.out.println("recordPayloadLength = " + recordPayloadLength);
 
         try{
             String tablePath = "data/user_data/"+tableName+".tbl";
@@ -1375,6 +1376,7 @@ public class BeaverBase {
             recordCount++;
             table.seek(1);
             table.writeByte(recordCount);
+            System.out.println("recordCount = " + recordCount);
 
             int lastRecordLocation;
             if (recordCount == 0) {
@@ -1391,10 +1393,13 @@ public class BeaverBase {
             /*update start of content*/
             table.seek(2);
             table.writeShort(newStartOfContent);
+            System.out.println("newStartOfContent = " + newStartOfContent);
 
             table.seek(newStartOfContent);
 
             table.write(record);
+            System.out.println("record = " + Arrays.toString(record));
+            System.out.println("bytesToHex(record) = " + bytesToHex(record));
 
             /*add record location to list*/
 
@@ -1409,6 +1414,7 @@ public class BeaverBase {
 
             table.seek(recordPointer);
             table.writeShort(newStartOfContent);
+            System.out.println("newStartOfContent = " + newStartOfContent);
 
             table.close();
         }
@@ -2466,5 +2472,17 @@ public class BeaverBase {
         }
 
         return false;
+    }
+
+
+    private final static char[] hexArray = "0123456789ABCDEF".toCharArray();
+    public static String bytesToHex(byte[] bytes) {
+        char[] hexChars = new char[bytes.length * 2];
+        for ( int j = 0; j < bytes.length; j++ ) {
+            int v = bytes[j] & 0xFF;
+            hexChars[j * 2] = hexArray[v >>> 4];
+            hexChars[j * 2 + 1] = hexArray[v & 0x0F];
+        }
+        return new String(hexChars);
     }
 }

@@ -399,16 +399,21 @@ public class BeaverBase {
             */
             int recordsVisited = 0;
 
+            int recordPointer = 8;
+
             /*linear search records for those that match our query*/
-            while(recordsVisited <= recordCount){
-                recordsVisited++;
+            do{
+
                 /*get location of next title*/
-                table.seek(8+((recordsVisited-1)*2));
+                table.seek(recordPointer);
                 int recordLocation = table.readShort();
+                recordPointer+=2;
 
                 /*checkpoint -- if record has been deleted, do not continue*/
                 if (recordLocation == -1)
                     continue;
+
+                recordsVisited++;
 
                 /*seek to record*/
                 table.seek(recordLocation);
@@ -425,16 +430,12 @@ public class BeaverBase {
 
                 recordConstraintOffset = 7 + numColumns; //this will always be the same as a starting point
                 for (int j = 1; j < constraintOrdinalPosition-1; j++) {
-                    //System.out.println("dataTypeList.get(j) = " + dataTypeList.get(j));
                     recordConstraintOffset+=getContentSize(dataTypeList.get(j)); //accounted for all but the strings
-                    //System.out.println("adding " + getContentSize(dataTypeList.get(j)));
 
                     int columnTypeByte = table.readByte();
-                    //System.out.println("columnTypeByte = " + columnTypeByte);
 
                     if (columnTypeByte>0xB) { //if we find a TEXT type
                         recordConstraintOffset+= (columnTypeByte -0xC);
-                        //System.out.println("adding "+(columnTypeByte -0xC));
                     }
                 }
                 if(recordConstraintType.equals("TEXT")){
@@ -446,19 +447,14 @@ public class BeaverBase {
 
 
                 table.seek(recordLocation+recordConstraintOffset);
-                //System.out.println("recordLocation = " + recordLocation);
-                //System.out.println("recordConstraintOffset = " + recordConstraintOffset);
 
                 /*check if record matches where condition*/
                 boolean foundMatch = false;
-
-                //System.out.println("recordConstraintType = " + recordConstraintType);
 
                 if (recordConstraintType.equals("TEXT")) {
                     byte[] temp = new byte[textConstraintLength];
                     table.read(temp);
                     String actualConstraintValue1 = new String(temp);
-                    //System.out.println("actualConstraintValue1 = "+actualConstraintValue1);
                     //System.out.println("actualConstraintValue1 =? constraintValue : " + actualConstraintValue1 +" =? "+constraintValue);
                     /* Test if we match constraint depending on constraint operator.
                     For TEXT data type only != and = are sensical */
@@ -612,13 +608,14 @@ public class BeaverBase {
                             throw new Error("Not a valid data type: "+recordConstraintType);
                     }
                 }
-            }
+            } while (recordsVisited < recordCount);
             /*close out of table*/
             table.close();
         }
         catch(IOException e) {
             System.out.println(e);
         }
+        System.out.println();
     }
 
     /*parse query*/
@@ -940,9 +937,7 @@ public class BeaverBase {
 
                     recordConstraintOffset = 7 + numColumns; //this will always be the same as a starting point
                     for (int j = 1; j < constraintOrdinalPosition-1; j++) {
-                        //System.out.println("dataTypeList.get(j) = " + dataTypeList.get(j));
                         recordConstraintOffset+=getContentSize(dataTypeList.get(j)); //accounted for all but the strings
-                        //System.out.println("adding " + getContentSize(dataTypeList.get(j)));
 
                         int columnTypeByte = table.readByte();
                         //System.out.println("columnTypeByte = " + columnTypeByte);
@@ -961,8 +956,6 @@ public class BeaverBase {
                 }
 
                 table.seek(recordLocation+recordConstraintOffset);
-                //System.out.println("recordLocation = " + recordLocation);
-                //System.out.println("recordConstraintOffset = " + recordConstraintOffset);
 
                 /*check if record matches where condition*/
                 boolean foundMatch = false;
@@ -976,8 +969,7 @@ public class BeaverBase {
                     byte[] temp = new byte[textConstraintLength];
                     table.read(temp);
                     String actualConstraintValue1 = new String(temp);
-                    //System.out.println("actualConstraintValue1 = "+actualConstraintValue1);
-                    //System.out.println("actualConstraintValue1 =? constraintValue : " + actualConstraintValue1 +" =? "+constraintValue);
+
                     /* Test if we match constraint depending on constraint operator.
                     For TEXT data type only != and = are sensical */
                     switch (constraintOperator) {
@@ -990,8 +982,6 @@ public class BeaverBase {
                         default:
                             throw new Error("Invalid constraint "+constraintOperator);
                     }
-
-
                 }
                 else{
                     switch (recordConstraintType) {
@@ -2115,9 +2105,8 @@ public class BeaverBase {
 
                     recordConstraintOffset = 7 + numColumns; //this will always be the same as a starting point
                     for (int j = 1; j < constraintOrdinalPosition-1; j++) {
-                        System.out.println("dataTypeList.get(j) = " + dataTypeList.get(j));
+
                         recordConstraintOffset+=getContentSize(dataTypeList.get(j)); //accounted for all but the strings
-                        //System.out.println("adding " + getContentSize(dataTypeList.get(j)));
 
                         int columnTypeByte = table.readByte();
                         //System.out.println("columnTypeByte = " + columnTypeByte);

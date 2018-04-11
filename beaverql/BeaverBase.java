@@ -1354,8 +1354,11 @@ public class BeaverBase {
             int recordCount = beaverbase_tables.read();
 
             /*if record count == 0 then then we can just break*/
-            if (recordCount == 0)
+            if (recordCount == 0){
+                System.out.println("");
                 return;
+            }
+
 
             /*
             recordCount will change if we delete a record. So we can't use it for looping through a page
@@ -1363,10 +1366,10 @@ public class BeaverBase {
             */
             int recordsVisited = 0;
 
-            while(recordsVisited < recordCount){
+            while(recordsVisited <= recordCount){
 
                 recordsVisited++;
-
+                System.out.println("recordsVisited = " + recordsVisited);
                 /*get location of next title*/
                 beaverbase_tables.seek(8+((recordsVisited-1)*2));
                 int recordLocation = beaverbase_tables.readShort();
@@ -1377,6 +1380,7 @@ public class BeaverBase {
 
                 /*get rowId*/
                 beaverbase_tables.seek(recordLocation+2);
+                //System.out.println("recordLocation+2 = " + (recordLocation+2));
                 int rowId = beaverbase_tables.readInt();
 
                 /*get length of table name*/
@@ -1679,7 +1683,7 @@ public class BeaverBase {
             int recordCount = beaverbase_tables.read();
             int rowId = 1; //will be changed if recordCount is != 0
             if (recordCount != 0) {
-                rowId = getRowId("beaverbase_tables") + 1;
+                rowId = getRowId("beaverbase_tables");
             }
 
             /*increment number of records*/
@@ -1710,7 +1714,9 @@ public class BeaverBase {
             int recordLocation = startOfContent - catalogTablesPayloadLength;
             beaverbase_tables.seek(recordLocation);
             beaverbase_tables.writeShort(catalogTablesPayloadLength - 8); //record payload length (not including record header)
+            //System.out.println("catalogTablesPayloadLength - 8 = " + (catalogTablesPayloadLength - 8));
             beaverbase_tables.writeInt(rowId); //rowId
+            //System.out.println("rowId = " + rowId);
             beaverbase_tables.write(0x1); //number of columns in beaverbase_tables
             int textTypeCode = 0xC+(int)tableName.length();
             beaverbase_tables.writeByte((int)textTypeCode); //rowid is an INT --> Serial Typecode 6
@@ -1807,30 +1813,32 @@ public class BeaverBase {
 
     /*get most recent rowId -- only necessary for catalog .tbl files*/
     public static int getRowId(String tableName){
-        int rowId = 0;
+        int recordPointer = 1;
+        int i = 0;
         try{
             tableName = "data/catalog/"+tableName+".tbl";
             RandomAccessFile table = new RandomAccessFile(tableName, "rw");
-            table.seek(1);
-            int recordCount = table.read();
 
-            /*find location of most recent record*/
-            table.seek(8+((recordCount-1)*2));
-            int mostRecentRecordLocation = table.readShort();
+            do{
+                /*seek to the next record pointer
+                so long as it's not a 0, it's either a real record pointer
+                or a -1 where a record used to be (and thus that rowid has
+                already been claimed
+                */
+                table.seek(8 + (2*i));
+                recordPointer = table.readShort();
+                i++;
 
-            /*seek to most recent record*/
-            table.seek(mostRecentRecordLocation);
 
-            /*read the 4 byte rowId and update rowId*/
-            rowId =  table.readInt();
+            } while (recordPointer != 0);
 
             table.close();
+
         }
         catch(IOException e) {
             System.out.println(e);
         }
-
-        return rowId;
+        return i;
     }
 
     /*get table information from beaverbase_columns. requests can be dataTypeList, columnList, nullList, ordinalPositionList*/
@@ -2255,7 +2263,7 @@ public class BeaverBase {
         columnListActualTables.add("rowid");
         columnListActualTables.add("table_name");
 
-        System.out.println("columnListActualTables = " + columnListActualTables.toString());
+        //System.out.println("columnListActualTables = " + columnListActualTables.toString());
 
         ArrayList<String> notNullListTables = new ArrayList<>();
         notNullListTables.add("YES");
@@ -2265,7 +2273,7 @@ public class BeaverBase {
         dataTypeListTables.add("INT");
         dataTypeListTables.add("TEXT");
 
-        System.out.println("dataTypeListTables = " + dataTypeListTables.toString());
+        //System.out.println("dataTypeListTables = " + dataTypeListTables.toString());
 
         /*then actually purging from beaverbase_tables*/
         deleteRecords(
@@ -2279,15 +2287,6 @@ public class BeaverBase {
             dataTypeListTables
         );
 
-//        boolean hasConstraint,
-//        String tableName,
-//        String constraintColumn,
-//        String constraintOperator,
-//        String constraintValue,
-//        ArrayList<String> columnListActual,
-//        ArrayList<String> notNullList,
-//        ArrayList<String> dataTypeList
-
         /*delete relevent records from beaverbase_columns*/
         /*first set up our parameters for deleteRecords*/
         ArrayList<String> columnListActualColumns = new ArrayList<>();
@@ -2297,12 +2296,12 @@ public class BeaverBase {
         columnListActualColumns.add("data_type");
         columnListActualColumns.add("ordinal_position");
         columnListActualColumns.add("is_nullable");
-        System.out.println("columnListActualColumns = " + columnListActualColumns.toString());
+        //System.out.println("columnListActualColumns = " + columnListActualColumns.toString());
 
         ArrayList<String> notNullListColumns = new ArrayList<>();
         for (int i = 0; i < 6; i++)
            notNullListColumns.add("YES");
-        System.out.println("notNullListColumns = " + notNullListColumns.toString());
+        //System.out.println("notNullListColumns = " + notNullListColumns.toString());
 
         ArrayList<String> dataTypeListColumns = new ArrayList<>();
         dataTypeListColumns.add("INT");
@@ -2312,7 +2311,7 @@ public class BeaverBase {
         dataTypeListColumns.add("TINYINT");
         dataTypeListColumns.add("TEXT");
 
-        System.out.println("dataTypeListColumns = " + dataTypeListColumns.toString());
+        //System.out.println("dataTypeListColumns = " + dataTypeListColumns.toString());
 
         /*then actually purging from beaverbase_columns*/
         deleteRecords(

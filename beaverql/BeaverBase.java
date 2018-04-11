@@ -315,6 +315,12 @@ public class BeaverBase {
         tableName = leftSplit.get(1).replace(" ", "");
         //System.out.println("tableName = " + tableName);
 
+        /*if the table onto which we are performing a replace doesn't exist, break*/
+        if(!tableExists(tableName)){
+            System.out.println("\n"+tableName + " does not exist.\n");
+            return;
+        }
+
         ArrayList<String> whereSplit = new ArrayList<>(Arrays.asList(fromSplit.get(1).split("where")));
         //System.out.println("whereSplit = " + whereSplit);
         ArrayList<String> changeArray = new ArrayList<>(Arrays.asList(whereSplit.get(0).split(" ")));
@@ -343,7 +349,7 @@ public class BeaverBase {
 
         /*validate query columns*/
         if(changeColumn.equals("rowid")){
-            System.out.println("rowid is immutable\n");
+            System.out.println("\nrowid is immutable\n");
         }
         else if (columnListActual.contains(changeColumn)) {
            /*pass values on to be printed by printQueryResults*/
@@ -661,7 +667,12 @@ public class BeaverBase {
         for (int i = 1; i < selectSplit.size(); i++) {
             columnList.add(selectSplit.get(i).replace(",", ""));
         }
-        //System.out.println("columnList = " + columnList.toString());
+
+        /*if the table from which we are qerying doesn't exist, break*/
+        if(!tableExists(tableName)){
+            System.out.println("\n"+tableName + " does not exist.\n");
+            return;
+        }
 
         /*retrieve table information about columns*/
         ArrayList<String> columnListActual = getTableInformation(tableName, "columnList");
@@ -909,7 +920,6 @@ public class BeaverBase {
 
             do{
 
-
                 /*get location of next title*/
                 table.seek(recordPointer);
                 int recordLocation = table.readShort();
@@ -1149,15 +1159,17 @@ public class BeaverBase {
 
         String tableName = leftInsertTokens.get(leftInsertTokens.size()-1);
 
+        /*if the table into which we are inserting doesn't exist, break*/
+        if(!tableExists(tableName)){
+            System.out.println("\n"+tableName + " does not exist.\n");
+            return;
+        }
+
         for (int i = 0; i < leftInsertTokens.size()-1; i++)
             columnList.add(leftInsertTokens.get(i).replace(",", "").replace(")", ""));
 
         for (int i = 0; i < rightInsertTokens.size(); i++)
             valueList.add(rightInsertTokens.get(i).replace(",", "").replace(")", ""));
-
-        //System.out.println("columnList = " + columnList.toString());
-        //System.out.println("valuelist = " + valueList.toString());
-        //System.out.println("tableName = " + tableName);
 
         /*retrieve table information about columns*/
         ArrayList<String> columnListActual = getTableInformation(tableName, "columnList");
@@ -1182,8 +1194,6 @@ public class BeaverBase {
                 }
             }
         }
-        //System.out.println("orderedValueList = " + orderedValueList.toString());
-        //System.out.println("");
 
         /*determine payload length*/
         int payloadLength = 2 + 4 + 1 + columnList.size() -1;
@@ -1343,7 +1353,6 @@ public class BeaverBase {
         System.out.println("\nrowid\ttable_name\n" +"--------------------------");
         try{
             /*create access to tables file in catalog*/
-            //System.out.println("writing to beaverbase_tables.tbl");
             RandomAccessFile beaverbase_tables = new RandomAccessFile("data/catalog/beaverbase_tables.tbl", "rw");
 
             /*determine number of records*/
@@ -1412,6 +1421,12 @@ public class BeaverBase {
         ArrayList<String> createTableTokens = new ArrayList<>(Arrays.asList(createTableString.split(" ")));
 
         String tableName = createTableTokens.get(1);
+
+        /*if the table name is already in use, break*/
+        if(tableExists(tableName)){
+            System.out.println("\n"+tableName + " already exists. Choose another name.\n");
+            return;
+        }
 
         /* Define table file name */
         String tableFileName = "data/user_data/"+tableName + ".tbl";
@@ -1997,6 +2012,12 @@ public class BeaverBase {
             //System.out.println("tableName = " + tableName);
         }
 
+        /*if the table from which we are deleting doesn't exist, break*/
+        if(!tableExists(tableName)){
+            System.out.println("\n"+tableName + " does not exist.\n");
+            return;
+        }
+
         /*retrieve table information about columns*/
         ArrayList<String> columnListActual = getTableInformation(tableName, "columnList");
         //System.out.println("columnListActual = " + columnListActual.toString());
@@ -2313,5 +2334,68 @@ public class BeaverBase {
             dataTypeListColumns
         );
 
+    }
+
+    /*check if table exists*/
+    public static boolean tableExists(String tableName){
+
+        try{
+            /*create access to tables file in catalog*/
+            RandomAccessFile beaverbase_tables = new RandomAccessFile("data/catalog/beaverbase_tables.tbl", "rw");
+
+            /*determine number of records*/
+            beaverbase_tables.seek(1);
+            int recordCount = beaverbase_tables.read();
+
+            /*if record count == 0 then then we can just break*/
+            if (recordCount == 0){
+                System.out.println("");
+                return false;
+            }
+
+            /*
+            recordCount will change if we delete a record. So we can't use it for looping through a page
+            deleted record pointers will count in our looping value.
+            */
+            int recordsVisited = 0;
+
+            int recordPointer = 8;
+
+            do{
+
+                /*get location of next title*/
+                beaverbase_tables.seek(recordPointer);
+                int recordLocation = beaverbase_tables.readShort();
+                recordPointer+=2;
+
+                /*check if record has been deleted, if not increment the recordsVisited as we will now visit this record*/
+                if (recordLocation == -1)
+                    continue;
+
+                recordsVisited++;
+
+                /*get length of table name*/
+                beaverbase_tables.seek(recordLocation+7);
+                int tableNameLength = beaverbase_tables.readUnsignedByte()-0xC;
+
+                /*read and print the table name*/
+                byte[] tableNameArr = new byte[tableNameLength];
+                beaverbase_tables.read(tableNameArr);
+                String tableNameString = new String(tableNameArr);
+
+                /*if we find the table name that was passed, it exists*/
+                if(tableNameString.equals(tableName)){
+                    return true;
+                }
+
+            } while (recordsVisited < recordCount);
+
+            beaverbase_tables.close();
+
+        } catch (IOException e) {
+            System.out.println(e);
+        }
+
+        return false;
     }
 }

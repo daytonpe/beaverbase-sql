@@ -176,10 +176,16 @@ public class BeaverBase {
             case "init":
                 initialize();
                 break;
-            case "new":
-                createPageTest();
+            case "test1":
+                test1();
                 break;
-           case "exit":
+            case "test2":
+                test2();
+                break;
+            case "test3":
+                test3();
+                break;
+            case "exit":
                 isExit = true;
                 break;
             case "quit":
@@ -1326,7 +1332,6 @@ public class BeaverBase {
             /*save start of Content Location*/
             table.seek(pageStart+2);
             int startOfContent = table.readShort();
-
 
             /*seek to correct location and write payload*/
             int newStartOfContent = startOfContent - payloadLength;
@@ -2650,11 +2655,18 @@ public class BeaverBase {
         return false;
     }
 
-    public static void createPageTest(){
-        //createPage("t1");
-        //System.out.println(hasSpace("t1", 30));
+    public static void test1(){
+        System.out.println(hasSpace("t1", 30));
+    }
+
+     public static void test2(){
         String insert17 = "insert into table (rowid, name, area, population) t1 (16, wilbarger, 150.4, 190000)";
         parseInsert(insert17);
+    }
+
+    public static void test3(){
+        String insert18 = "insert into table (rowid, name, area, population) t1 (17, frio, 150.4, 19000)";
+        parseInsert(insert18);
 
     }
 
@@ -2681,13 +2693,12 @@ public class BeaverBase {
                 pagePointer = table.readInt();
                 pageNumber++;
             }
+            pageNumber++;
 
             /*rewrite the old rightmost page's Right Page section in the header to point to our new rightmost page*/
             int newPageStart = pageStart+pageSize;
-            //System.out.println("(pageStart+4) = " + (pageStart+4));
             table.seek(pageStart+4);
             table.writeInt(newPageStart);
-            //System.out.println("newPageStart = " + newPageStart);
 
             /*seek to the end of the table as it was and add *pageSize* of bytes*/
             table.seek(newPageStart);
@@ -2697,7 +2708,7 @@ public class BeaverBase {
             table.seek(newPageStart);
             table.writeByte(0xD); //all interior pages for now
             table.writeByte(0); //number of records on this page
-            table.writeShort((short)(pageStart+(int)pageSize)); //start of Content --TODO sloppy conversions
+            table.writeShort((short)(pageNumber*(int)pageSize)); //start of Content --TODO sloppy conversions
             table.writeInt(-1); // right page
 
 

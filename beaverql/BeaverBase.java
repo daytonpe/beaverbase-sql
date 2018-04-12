@@ -2541,11 +2541,11 @@ public class BeaverBase {
     public static void initialize(){
         initializeDataStore();
         String createTexasCounties = "create t1 ( rowid int, name text not nullable, area double, population int )";
-        String insert1 = "insert into table (rowid, name, area, population) t1 (10, archer, 150.4, 12876)";
-        String insert2 = "insert into table (rowid, name, area, population) t1 (7, dallas, 345.6, 2987678)";
-        String insert3 = "insert into table (rowid, name, area, population) t1 (9, jack, 534.3, 5476)";
-        String insert4 = "insert into table (rowid, name, area, population) t1 (3, Montague, 789.3, 10292)";
-        String insert5 = "insert into table (rowid, name, area, population) t1 (89, Anderson, 150.4, 9972)";
+        String insert1 = "insert into table (rowid, name, area, population) t1 (1, archer, 150.4, 12876)";
+        String insert2 = "insert into table (rowid, name, area, population) t1 (2, dallas, 345.6, 2987678)";
+        String insert3 = "insert into table (rowid, name, area, population) t1 (3, jack, 534.3, 5476)";
+        String insert4 = "insert into table (rowid, name, area, population) t1 (4, Montague, 789.3, 10292)";
+        String insert5 = "insert into table (rowid, name, area, population) t1 (5, Anderson, 150.4, 9972)";
         String query = "select * from t1";
 
         parseCreateTable(createTexasCounties);
@@ -2570,38 +2570,52 @@ public class BeaverBase {
 
     /*check if there is space to insert a new record and it's corresponding record pointer, leaving 2 zeros as buffer*/
     public static boolean hasSpace(String tableName, int recordLength){
-        boolean hasSpace = false;
         try{
             RandomAccessFile table = new RandomAccessFile("data/user_data/"+tableName+".tbl", "rw");
 
             /*read the page pointers and seek to the header of the newest page*/
+            /*read the page pointers and seek to the header of the newest page*/
             table.seek(4);
             int pagePointer = table.readInt();
             int pageNumber = 1;
-            long pageStart;
+            int pageStart = 0;
+
             while(pagePointer != -1){
-                pageStart = pageSize*pageNumber;
+                pageStart+=pageSize;
                 table.seek(pageStart+4);
                 pagePointer = table.readInt();
                 pageNumber++;
             }
 
             /*read start of content on newest page*/
-
+            table.seek(2);
+            int startOfContent = table.readShort();
 
             /*traverse through the record pointers on newest page find the first 00 00 SHORT (empty space)*/
+            int recordPointerPosition = 8;
+            table.seek(recordPointerPosition);
+            int recordPointer = table.readShort();
+            while(recordPointer!=0){
+                recordPointerPosition+=2;
+                recordPointer = table.readShort();
+            }
 
             /*subtract to find remaining space. Must be larger than recordLength + 4 for space to be available.*/
+            int spaceRemaining = startOfContent - recordPointerPosition;
 
-
+            if (spaceRemaining > recordLength+4){ //4 because we want a two byte buffer after our record location array
+                return true;
+            }
         } catch (IOException e) {
-            System.out.println(e);
+            System.out.println("e");
         }
-        return hasSpace;
+        return false;
     }
 
     public static void createPageTest(){
-        createPage("t1");
+        //createPage("t1");
+        System.out.println(hasSpace("t1", 30));
+
     }
 
     /*add one pagelength worth of bytes to a .tbl file*/

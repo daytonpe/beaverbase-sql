@@ -1239,11 +1239,8 @@ public class BeaverBase {
 
         /*retrieve table information about columns*/
         ArrayList<String> columnListActual = getTableInformation(tableName, "columnList");
-        //System.out.println("columnListActual = " + columnListActual.toString());
         ArrayList<String> notNullList = getTableInformation(tableName, "nullList");
-        //System.out.println("notNullList = " + notNullList.toString());
         ArrayList<String> dataTypeList = getTableInformation(tableName, "dataTypeList");
-        //System.out.println("dataTypeList = " + dataTypeList.toString());
 
         /*ensure columns and null properties match*/
         if(columnList.size() != columnListActual.size())
@@ -1297,34 +1294,45 @@ public class BeaverBase {
                     break;
             }
         }
-        //System.out.println("payloadLength = " + payloadLength);
+
+        /*ensure there is space for payload*/
+        if (!hasSpace(tableName, payloadLength))
+            createPage(tableName); /*if not, extend the table*/
 
         /*connect to correct table page*/
         try{
-            String tablePath = "data/user_data/"+tableName+".tbl";
-            RandomAccessFile table = new RandomAccessFile(tablePath, "rw");
-            table.seek(1);
-            int recordCount = table.read();
+            RandomAccessFile table = new RandomAccessFile("data/user_data/"+tableName+".tbl", "rw");
 
-            int lastRecordLocation;
-            if (recordCount == 0) {
-                lastRecordLocation = (int) pageSize;
-            }
-            else{
-                table.seek(8+((recordCount-1)*2));
-                lastRecordLocation = table.readShort();
+            /*read the page pointers and seek to the header of the newest page*/
+            table.seek(4);
+            int pagePointer = table.readInt();
+            int pageNumber = 1;
+            int pageStart = 0;
+
+            while(pagePointer != -1){
+                pageStart+=pageSize;
+                table.seek(pageStart+4);
+                pagePointer = table.readInt();
+                pageNumber++;
             }
 
-            /*update the record count*/
+            /*increment recordCount*/
+            table.seek(pageStart+1);
+            int recordCount = table.readByte();
             recordCount++;
-            table.seek(1);
+            table.seek(pageStart+1);
             table.writeByte(recordCount);
 
+            /*save start of Content Location*/
+            table.seek(pageStart+2);
+            int startOfContent = table.readShort();
+
+
             /*seek to correct location and write payload*/
-            int newStartOfContent = lastRecordLocation - payloadLength;
+            int newStartOfContent = startOfContent - payloadLength;
 
             /*update start of content*/
-            table.seek(2);
+            table.seek(pageStart+2);
             table.writeShort(newStartOfContent);
 
             table.seek(newStartOfContent);
@@ -1403,8 +1411,14 @@ public class BeaverBase {
             }
 
             /*add record location to list*/
-            int recordLocationPosition = 8+((recordCount-1)*2);
-            table.seek(recordLocationPosition);
+            int recordPointerPosition = pageStart+8;
+            table.seek(recordPointerPosition);
+            int recordPointer = table.readShort();
+            while(recordPointer!=0){
+                recordPointerPosition+=2;
+                recordPointer = table.readShort();
+            }
+            table.seek(recordPointerPosition);
             table.writeShort(newStartOfContent);
 
             table.close();
@@ -2541,11 +2555,23 @@ public class BeaverBase {
     public static void initialize(){
         initializeDataStore();
         String createTexasCounties = "create t1 ( rowid int, name text not nullable, area double, population int )";
-        String insert1 = "insert into table (rowid, name, area, population) t1 (1, archer, 150.4, 12876)";
-        String insert2 = "insert into table (rowid, name, area, population) t1 (2, dallas, 345.6, 2987678)";
-        String insert3 = "insert into table (rowid, name, area, population) t1 (3, jack, 534.3, 5476)";
-        String insert4 = "insert into table (rowid, name, area, population) t1 (4, Montague, 789.3, 10292)";
-        String insert5 = "insert into table (rowid, name, area, population) t1 (5, Anderson, 150.4, 9972)";
+        String insert1  = "insert into table (rowid, name, area, population) t1 (1, archer, 150.4, 8809)";
+        String insert2  = "insert into table (rowid, name, area, population) t1 (2, dallas, 345.6, 2987678)";
+        String insert3  = "insert into table (rowid, name, area, population) t1 (3, jack, 534.3, 5476)";
+        String insert4  = "insert into table (rowid, name, area, population) t1 (4, montague, 789.3, 10292)";
+        String insert5  = "insert into table (rowid, name, area, population) t1 (5, anderson, 150.4, 9972)";
+        String insert6  = "insert into table (rowid, name, area, population) t1 (6, bexar, 150.4, 1900000)";
+        String insert7  = "insert into table (rowid, name, area, population) t1 (7, collin, 345.6, 910000)";
+        String insert8  = "insert into table (rowid, name, area, population) t1 (8, tarrant, 534.3, 2000000)";
+        String insert9  = "insert into table (rowid, name, area, population) t1 (9, williamson, 789.3, 510000)";
+        String insert10 = "insert into table (rowid, name, area, population) t1 (10, travis, 150.4, 1200000)";
+        String insert11 = "insert into table (rowid, name, area, population) t1 (11, comal, 150.4, 130000)";
+        String insert12 = "insert into table (rowid, name, area, population) t1 (12, nueces, 345.6, 360000)";
+        String insert13 = "insert into table (rowid, name, area, population) t1 (13, hudspeth, 534.3, 3400)";
+        String insert14 = "insert into table (rowid, name, area, population) t1 (14, coryell, 789.3, 76000)";
+        String insert15 = "insert into table (rowid, name, area, population) t1 (15, hays, 150.4, 190000)";
+        String insert16 = "insert into table (rowid, name, area, population) t1 (16, glasscock, 150.4, 1300)";
+
         String query = "select * from t1";
 
         parseCreateTable(createTexasCounties);
@@ -2554,6 +2580,18 @@ public class BeaverBase {
         parseInsert(insert3);
         parseInsert(insert4);
         parseInsert(insert5);
+        parseInsert(insert6);
+        parseInsert(insert7);
+        parseInsert(insert8);
+        parseInsert(insert9);
+        parseInsert(insert10);
+        parseInsert(insert11);
+        parseInsert(insert12);
+        parseInsert(insert13);
+        parseInsert(insert14);
+        parseInsert(insert15);
+        parseInsert(insert16);
+        parseQuery(query);
 
     }
 
@@ -2614,7 +2652,9 @@ public class BeaverBase {
 
     public static void createPageTest(){
         //createPage("t1");
-        System.out.println(hasSpace("t1", 30));
+        //System.out.println(hasSpace("t1", 30));
+        String insert17 = "insert into table (rowid, name, area, population) t1 (16, wilbarger, 150.4, 190000)";
+        parseInsert(insert17);
 
     }
 

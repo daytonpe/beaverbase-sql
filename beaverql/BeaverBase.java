@@ -16,6 +16,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import static java.lang.System.out;
 import java.math.BigInteger;
+import java.nio.ByteBuffer;
 
 public class BeaverBase {
 
@@ -574,8 +575,8 @@ public class BeaverBase {
 
                     /*now we can seek to the correct key to change*/
                     table.seek(recordPayloadPointer);
-                    //System.out.println("recordPayloadPointer = " + recordPayloadPointer);
-                    //System.out.println("convertTypeCode(dataType) = " + convertTypeCode(dataType));
+                    System.out.println("recordPayloadPointer = " + recordPayloadPointer);
+                    System.out.println("convertTypeCode(dataType) = " + convertTypeCode(dataType));
 
                     switch (convertTypeCode(dataType)) {
                         case "TINYINT":
@@ -603,21 +604,74 @@ public class BeaverBase {
                             table.writeLong(Long.parseLong(changeValue));
                             break;
                         case "TEXT":
-                            //table.write(changeValue.getBytes());
                             /*since text size is variable, lets delete the record, and then reinsert the updated value*/
+                            //System.out.println("old word length = " + (dataType - 0xC));
+                            System.out.println("recordPayloadPointer = " + recordPayloadPointer); //front of the old word
+                            System.out.println("changeValue = " + changeValue);
+                            int newTextLength = changeValue.length();
+                            int oldTextLength = dataType - 0xC;
+                            System.out.println("newTextLength = " + newTextLength);
+
+                            /*figure out how much extra space we need to add to the new byte[] that will store our record*/
+                            int wordSizeDifference = newTextLength - oldTextLength;
+                            System.out.println("wordSizeDifference = " + wordSizeDifference);
 
                             table.seek(recordLocation);
                             int recordPayload = table.readShort();
                             System.out.println("recordPayload = " + recordPayload);
-                            byte[] updateRecord = new byte[(7+numColumns +recordPayload)];
+                            byte[] oldRecord = new byte[(7+numColumns + recordPayload)];
                             table.seek(recordLocation);
-                            table.read(updateRecord);
+                            table.read(oldRecord);
 
-                            System.out.println("delete from "+ tableName + " where rowid = " + Integer.toString(recordRowId));
+                            byte[] newRecord = new byte[(7+numColumns + recordPayload + wordSizeDifference)];
+                            System.out.println("recordLocation = " + recordLocation);
+                            int textStartIndex = recordPayloadPointer - recordLocation;
+                            System.out.println("textStartIndex = " + textStartIndex);
+                            System.out.println("newRecord.length = " + newRecord.length);
+
+                            byte[] changeValueArr = changeValue.getBytes();
+                            System.out.println();
+
+                            /*prep the new record payload*/
+                            int newRecordPayloadInt = recordPayload + wordSizeDifference;
+                            System.out.println("newRecordPayloadInt = " + newRecordPayloadInt);
+                            String newRecordPayloadString = String.valueOf(newRecordPayloadInt);
+
+                            ByteBuffer b = ByteBuffer.allocate(4);
+                            b.putInt(newRecordPayloadInt);
+                            byte[] newRecordPayloadArr = b.array();
+
+
+                            /*create a new byte[] where the text is updated (size might change)*/
+                            int j = 0;
+                            /*insert bytes from original array before TEXT*/
+                            for (int i = 0; i < textStartIndex; i++) {
+                                newRecord[i] = oldRecord[j];
+                                j++;
+                            }
+                            /*insert bytes from new TEXT*/
+                            for (int i = j; i <= newTextLength+j-1; i++) {
+                                newRecord[i] = changeValueArr[i-j];
+                            }
+                            j+=oldTextLength;
+                            /*insert bytes from original array after TEXT*/
+                            for (int i = j; i < oldRecord.length; i++){
+                                newRecord[i+wordSizeDifference] = oldRecord[i];
+//                                System.out.print(oldRecord[i]+" ");
+                            }
+
+                            for (int i = 2; i<4; i++){
+                                newRecord[i-2] = newRecordPayloadArr[i];
+                            }
+
+                            System.out.println("\n");
+                            System.out.println("tableName = " + tableName);
+                            System.out.println("newRecordPayloadArr = " + Arrays.toString(newRecordPayloadArr));
+                            System.out.println("newRecord.length = " + newRecord.length);
 
                             String deleteCommand = "delete from "+ tableName + " where rowid = " + Integer.toString(recordRowId);
                             parseDelete(deleteCommand);
-                            insertByteArray(updateRecord, tableName, recordPayload);
+                            insertByteArray(newRecord, tableName, newRecord.length);
 
                             break;
                         default:
@@ -1362,9 +1416,11 @@ public class BeaverBase {
     public static void insertByteArray(byte[] record, String tableName, int recordPayloadLength) {
         /*connect to correct table page*/
 
+        System.out.println("record = " + Arrays.toString(record));
+
         int payloadLength = record.length;
-        System.out.println("payloadLength = " + payloadLength);
-        System.out.println("recordPayloadLength = " + recordPayloadLength);
+        //System.out.println("payloadLength = " + payloadLength);
+        //System.out.println("recordPayloadLength = " + recordPayloadLength);
 
         try{
             String tablePath = "data/user_data/"+tableName+".tbl";
@@ -1376,7 +1432,7 @@ public class BeaverBase {
             recordCount++;
             table.seek(1);
             table.writeByte(recordCount);
-            System.out.println("recordCount = " + recordCount);
+            //System.out.println("recordCount = " + recordCount);
 
             int lastRecordLocation;
             if (recordCount == 0) {
@@ -1388,18 +1444,18 @@ public class BeaverBase {
             }
 
             /*seek to correct location and write payload*/
-            int newStartOfContent = lastRecordLocation - payloadLength;
+            int newStartOfContent = lastRecordLocation - recordPayloadLength;
 
             /*update start of content*/
             table.seek(2);
             table.writeShort(newStartOfContent);
-            System.out.println("newStartOfContent = " + newStartOfContent);
+            //System.out.println("newStartOfContent = " + newStartOfContent);
 
             table.seek(newStartOfContent);
 
             table.write(record);
-            System.out.println("record = " + Arrays.toString(record));
-            System.out.println("bytesToHex(record) = " + bytesToHex(record));
+            //System.out.println("record = " + Arrays.toString(record));
+            //System.out.println("bytesToHex(record) = " + bytesToHex(record));
 
             /*add record location to list*/
 
@@ -1414,7 +1470,7 @@ public class BeaverBase {
 
             table.seek(recordPointer);
             table.writeShort(newStartOfContent);
-            System.out.println("newStartOfContent = " + newStartOfContent);
+            //System.out.println("newStartOfContent = " + newStartOfContent);
 
             table.close();
         }
@@ -2474,6 +2530,10 @@ public class BeaverBase {
         return false;
     }
 
+    /*
+    * method to visualize byte arrays
+    * https://stackoverflow.com/questions/9655181/how-to-convert-a-byte-array-to-a-hex-string-in-java
+    */
 
     private final static char[] hexArray = "0123456789ABCDEF".toCharArray();
     public static String bytesToHex(byte[] bytes) {

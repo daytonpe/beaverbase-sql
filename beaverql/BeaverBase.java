@@ -24,7 +24,7 @@ public class BeaverBase {
     static String version = "v1.0b(example)";
     static String copyright = "©2018 Pat Dayton";
     static boolean isExit = false;
-    static long pageSize = 512;
+    static int pageSize = 512;
 
     /*
      *  The Scanner class is used to collect user commands from the prompt
@@ -2614,25 +2614,38 @@ public class BeaverBase {
             for (int i = 0; i < b.length; i++) {
                 b[i] = 0; //initialize everything to 0;
             }
-            b[511] = 0xA;
 
             /*read the page pointers and seek to the header of the newest page*/
             table.seek(4);
             int pagePointer = table.readInt();
             int pageNumber = 1;
-            long pageStart = 0;
+            int pageStart = 0;
+
             while(pagePointer != -1){
-                pageStart = pageSize*pageNumber;
+                pageStart+=pageSize;
                 table.seek(pageStart+4);
                 pagePointer = table.readInt();
                 pageNumber++;
             }
 
+            /*rewrite the old rightmost page's Right Page section in the header to point to our new rightmost page*/
+            int newPageStart = pageStart+pageSize;
+            //System.out.println("(pageStart+4) = " + (pageStart+4));
+            table.seek(pageStart+4);
+            table.writeInt(newPageStart);
+            //System.out.println("newPageStart = " + newPageStart);
+
             /*seek to the end of the table as it was and add *pageSize* of bytes*/
-            table.seek(pageStart+(int)pageSize);
+            table.seek(newPageStart);
             table.write(b);
 
-            System.out.println("pagestart+pageSize = " + (pageStart+(int)pageSize));
+            /*seek back to page start and write the header*/
+            table.seek(newPageStart);
+            table.writeByte(0xD); //all interior pages for now
+            table.writeByte(0); //number of records on this page
+            table.writeShort((short)(pageStart+(int)pageSize)); //start of Content --TODO sloppy conversions
+            table.writeInt(-1); // right page
+
 
         } catch (IOException e) {
             System.out.println(e);

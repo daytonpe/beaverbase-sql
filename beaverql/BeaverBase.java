@@ -176,7 +176,10 @@ public class BeaverBase {
             case "init":
                 initialize();
                 break;
-            case "exit":
+            case "new":
+                createPageTest();
+                break;
+           case "exit":
                 isExit = true;
                 break;
             case "quit":
@@ -2552,6 +2555,88 @@ public class BeaverBase {
         parseInsert(insert4);
         parseInsert(insert5);
 
+    }
+
+    /*clean and sort headers -- delete -1 values, order per rowid*/
+    public static void cleanHeaders(String tableName){
+        try{
+            RandomAccessFile table = new RandomAccessFile("data/user_data/"+tableName+".tbl", "rw");
+            table.seek(8);
+            int recordPointer = table.readShort();
+        } catch (IOException e) {
+            System.out.println(e);
+        }
+    }
+
+    /*check if there is space to insert a new record and it's corresponding record pointer, leaving 2 zeros as buffer*/
+    public static boolean hasSpace(String tableName, int recordLength){
+        boolean hasSpace = false;
+        try{
+            RandomAccessFile table = new RandomAccessFile("data/user_data/"+tableName+".tbl", "rw");
+
+            /*read the page pointers and seek to the header of the newest page*/
+            table.seek(4);
+            int pagePointer = table.readInt();
+            int pageNumber = 1;
+            long pageStart;
+            while(pagePointer != -1){
+                pageStart = pageSize*pageNumber;
+                table.seek(pageStart+4);
+                pagePointer = table.readInt();
+                pageNumber++;
+            }
+
+            /*read start of content on newest page*/
+
+
+            /*traverse through the record pointers on newest page find the first 00 00 SHORT (empty space)*/
+
+            /*subtract to find remaining space. Must be larger than recordLength + 4 for space to be available.*/
+
+
+        } catch (IOException e) {
+            System.out.println(e);
+        }
+        return hasSpace;
+    }
+
+    public static void createPageTest(){
+        createPage("t1");
+    }
+
+    /*add one pagelength worth of bytes to a .tbl file*/
+    public static void createPage(String tableName){
+        try{
+            RandomAccessFile table = new RandomAccessFile("data/user_data/"+tableName+".tbl", "rw");
+
+            /*initialize byte[] we will use to extend our page*/
+            byte[] b = new byte[(int)pageSize];
+            for (int i = 0; i < b.length; i++) {
+                b[i] = 0; //initialize everything to 0;
+            }
+            b[511] = 0xA;
+
+            /*read the page pointers and seek to the header of the newest page*/
+            table.seek(4);
+            int pagePointer = table.readInt();
+            int pageNumber = 1;
+            long pageStart = 0;
+            while(pagePointer != -1){
+                pageStart = pageSize*pageNumber;
+                table.seek(pageStart+4);
+                pagePointer = table.readInt();
+                pageNumber++;
+            }
+
+            /*seek to the end of the table as it was and add *pageSize* of bytes*/
+            table.seek(pageStart+(int)pageSize);
+            table.write(b);
+
+            System.out.println("pagestart+pageSize = " + (pageStart+(int)pageSize));
+
+        } catch (IOException e) {
+            System.out.println(e);
+        }
     }
 
 }

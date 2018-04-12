@@ -2631,20 +2631,23 @@ public class BeaverBase {
             }
 
             /*read start of content on newest page*/
-            table.seek(2);
+            table.seek(pageStart+2);
             int startOfContent = table.readShort();
 
             /*traverse through the record pointers on newest page find the first 00 00 SHORT (empty space)*/
-            int recordPointerPosition = 8;
+            int recordPointerPosition = pageStart+8;
             table.seek(recordPointerPosition);
             int recordPointer = table.readShort();
+
             while(recordPointer!=0){
                 recordPointerPosition+=2;
                 recordPointer = table.readShort();
             }
+            System.out.println("recordPointer = " + recordPointerPosition);
 
             /*subtract to find remaining space. Must be larger than recordLength + 4 for space to be available.*/
             int spaceRemaining = startOfContent - recordPointerPosition;
+            System.out.println("spaceRemaining = " + spaceRemaining);
 
             if (spaceRemaining > recordLength+4){ //4 because we want a two byte buffer after our record location array
                 return true;
@@ -2711,10 +2714,8 @@ public class BeaverBase {
             table.writeShort((short)(pageNumber*(int)pageSize)); //start of Content --TODO sloppy conversions
             table.writeInt(-1); // right page
 
-
         } catch (IOException e) {
             System.out.println(e);
         }
     }
-
 }

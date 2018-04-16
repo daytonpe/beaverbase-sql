@@ -648,29 +648,33 @@ public class BeaverBase {
                                 j++;
                             }
                             /*insert bytes from new TEXT*/
-                            for (int i = j; i <= newTextLength+j-1; i++) {
+                            for (int i = j; i <= newTextLength+j-1; i++)
                                 newRecord[i] = changeValueArr[i-j];
-                            }
+
                             j+=oldTextLength;
                             /*insert bytes from original array after TEXT*/
-                            for (int i = j; i < oldRecord.length; i++){
+                            for (int i = j; i < oldRecord.length; i++)
                                 newRecord[i+wordSizeDifference] = oldRecord[i];
-                            }
 
-                            for (int i = 2; i<4; i++){
+                            for (int i = 2; i<4; i++)
                                 newRecord[i-2] = newRecordPayloadArr[i];
-                            }
-
-                            //System.out.println("newTextLength = " + newTextLength);
 
                             /*update the byte representing the updated TEXT*/
                             int newTextHeaderByte = newTextLength+0xC;
                             newRecord[6+changeOrdinalPosition-1] = (byte)newTextHeaderByte;
 
-                            String deleteCommand = "delete from "+ tableName + " where rowid = " + Integer.toString(recordRowId);
-
                             /*delete the old record before replacing it*/
-                            parseDelete(deleteCommand);
+                            deleteRecords(
+                                true,
+                                tableName,
+                                constraintColumn,
+                                constraintOperator,
+                                constraintValue,
+                                columnListActual,
+                                notNullList,
+                                dataTypeList,
+                                true);
+
 
                             /*if new word is bigger it will be reinserted at a new location*/
                             if (wordSizeDifference>0) {
@@ -680,8 +684,6 @@ public class BeaverBase {
                             else{
                                 insertByteArray(newRecord, tableName, newRecord.length, true, recordLocation);
                             }
-
-
                             break;
                         default:
                             throw new Error("Not a valid data type: "+recordConstraintType);
@@ -1153,6 +1155,7 @@ public class BeaverBase {
                             if (booleanPrintList.get(j)) {
                                 /*print it based on what type it is*/
                                 table.seek(recordPayloadPointer);
+                                //System.out.println("recordPayloadPointer = " + recordPayloadPointer);
                                 //System.out.println("dataType = " + dataType);
                                 //System.out.println("convertTypeCode(dataType) = " + convertTypeCode(dataType));
                                 switch (convertTypeCode(dataType)) {
@@ -1495,20 +1498,6 @@ public class BeaverBase {
             if(shorterFlag){
                 table.seek(originalAddress);
                 table.write(record);
-
-                /*add record location back list*/
-                //TODO recod location is deleted (changed to FF) when we call the delete method
-                //would be better to add a flag so that that doesn't happen.
-                int recordPointerPosition = pageStart+8;
-                table.seek(recordPointerPosition);
-                int recordPointer = table.readShort();
-                while(recordPointer!=0){
-                    recordPointerPosition+=2;
-                    recordPointer = table.readShort();
-                }
-
-                table.seek(recordPointerPosition);
-                table.writeShort(originalAddress);
             }
             /*otherwise write switch up the header and write in new location*/
             else{
@@ -2233,7 +2222,8 @@ public class BeaverBase {
                 constraintValue,
                 columnListActual,
                 notNullList,
-                dataTypeList);
+                dataTypeList,
+                false);
         }
         else{
             System.out.println("\ninvalid columns in query\n");
@@ -2249,7 +2239,8 @@ public class BeaverBase {
         String constraintValue,
         ArrayList<String> columnListActual,
         ArrayList<String> notNullList,
-        ArrayList<String> dataTypeList
+        ArrayList<String> dataTypeList,
+        boolean updateShorterTextFlag
         ){
 
         /*first determine where constraint and change are in ordinal position*/
@@ -2423,10 +2414,12 @@ public class BeaverBase {
 
                     /*update pointer*/
                     /*TODO this is ugly, but it works for now.*/
-                    tablePointer-=2;
-                    table.seek(tablePointer);
-                    table.writeShort(-1);
-                    tablePointer+=2;
+                    if (!updateShorterTextFlag) {
+                        tablePointer-=2;
+                        table.seek(tablePointer);
+                        table.writeShort(-1);
+                        tablePointer+=2;
+                    }
 
                     /*update record count*/
                     recordCount--;
@@ -2451,7 +2444,7 @@ public class BeaverBase {
         /*parse out the table name*/
         ArrayList<String> fromSplit = new ArrayList<>(Arrays.asList(dropTableString.split(" ")));
         String tableName = fromSplit.get(2).replace(" ", "");
-        System.out.println("tableName = " + tableName);
+        //System.out.println("tableName = " + tableName);
 
         /*delete files associated with this tableName*/
         File file = new File("data/user_data/"+tableName+".tbl");
@@ -2491,7 +2484,8 @@ public class BeaverBase {
             tableName, //constraintValue
             columnListActualTables,
             notNullListTables,
-            dataTypeListTables
+            dataTypeListTables,
+            false
         );
 
         /*delete relevent records from beaverbase_columns*/
@@ -2525,7 +2519,8 @@ public class BeaverBase {
             tableName, //constraintValue
             columnListActualColumns,
             notNullListColumns,
-            dataTypeListColumns
+            dataTypeListColumns,
+            false
         );
 
     }
@@ -2594,7 +2589,7 @@ public class BeaverBase {
     }
 
     /*
-    * method to visualize byte arrays
+    * method to visualize byte arrays from
     * https://stackoverflow.com/questions/9655181/how-to-convert-a-byte-array-to-a-hex-string-in-java
     */
     private final static char[] hexArray = "0123456789ABCDEF".toCharArray();

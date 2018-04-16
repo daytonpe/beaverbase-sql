@@ -1173,7 +1173,6 @@ public class BeaverBase {
                                 switch (convertTypeCode(dataType)) {
                                     case "TINYINT":
                                         int printValue2 = table.readByte();
-                                        System.out.print(printValue2 + "\t\t");
                                         System.out.print(String.format("%-16s" , printValue2));
                                         break;
                                     case "SMALLINT":
@@ -2684,47 +2683,47 @@ public class BeaverBase {
     public static void initialize2(){
         initializeDataStore();
         String createTexasCounties = "create t1 ( rowid int, name text not nullable, area double, population int, counselors tinyint )";
-//        String insert1  = "insert into table (rowid, name, area, population) t1 (1, archer, 150.4, 8809, 7)";
-//        String insert2  = "insert into table (rowid, name, area, population) t1 (2, dallas, 345.6, 2987678, 8)";
-//        String insert3  = "insert into table (rowid, name, area, population) t1 (3, jack, 534.3, 5476, 8)";
-//        String insert4  = "insert into table (rowid, name, area, population) t1 (4, montague, 789.3, 10292, 7)";
-//        String insert5  = "insert into table (rowid, name, area, population) t1 (5, anderson, 150.4, 9972, 9)";
-//        String insert6  = "insert into table (rowid, name, area, population) t1 (6, bexar, 150.4, 1900000, 6)";
-//        String insert7  = "insert into table (rowid, name, area, population) t1 (7, collin, 345.6, 910000, 7)";
-//        String insert8  = "insert into table (rowid, name, area, population) t1 (8, tarrant, 534.3, 2000000, 4)";
-//        String insert9  = "insert into table (rowid, name, area, population) t1 (9, williamson, 789.3, 510000)";
-//        String insert10 = "insert into table (rowid, name, area, population) t1 (10, travis, 150.4, 1200000, 7)";
-//        String insert11 = "insert into table (rowid, name, area, population) t1 (11, comal, 150.4, 130000, 8)";
-//        String insert12 = "insert into table (rowid, name, area, population) t1 (12, nueces, 345.6, 360000, 3)";
-//        String insert13 = "insert into table (rowid, name, area, population) t1 (13, hudspeth, 534.3, 3400, 7)";
-//        String insert14 = "insert into table (rowid, name, area, population) t1 (14, coryell, 789.3, 76000, 3)";
-//        String insert15 = "insert into table (rowid, name, area, population) t1 (15, hays, 150.4, 190000, 5)";
-//        String insert16 = "insert into table (rowid, name, area, population) t1 (16, glasscock, 150.4, 1300, 7)";
-//        String insert17 = "insert into table (rowid, name, area, population) t1 (17, wilbarger, 150.4, 190000, 4)";
-//        String insert18 = "insert into table (rowid, name, area, population) t1 (18, frio, 150.4, 19000, 7)";
+        String insert1  = "insert into table (rowid, name, area, population, counselors) t1 (1, archer, 150.4, 8809, 7)";
+        String insert2  = "insert into table (rowid, name, area, population, counselors) t1 (2, dallas, 345.6, 2987678, 8)";
+        String insert3  = "insert into table (rowid, name, area, population, counselors) t1 (3, jack, 534.3, 5476, 8)";
+        String insert4  = "insert into table (rowid, name, area, population, counselors) t1 (4, montague, 789.3, 10292, 7)";
+        String insert5  = "insert into table (rowid, name, area, population, counselors) t1 (5, anderson, 150.4, 9972, 9)";
+        String insert6  = "insert into table (rowid, name, area, population, counselors) t1 (6, bexar, 150.4, 1900000, 6)";
+        String insert7  = "insert into table (rowid, name, area, population, counselors) t1 (7, collin, 345.6, 910000, 7)";
+        String insert8  = "insert into table (rowid, name, area, population, counselors) t1 (8, tarrant, 534.3, 2000000, 4)";
+        String insert9  = "insert into table (rowid, name, area, population, counselors) t1 (9, williamson, 789.3, 510000, 3)";
+        String insert10 = "insert into table (rowid, name, area, population, counselors) t1 (10, travis, 150.4, 1200000, 7)";
+        String insert11 = "insert into table (rowid, name, area, population, counselors) t1 (11, comal, 150.4, 130000, 8)";
+        String insert12 = "insert into table (rowid, name, area, population, counselors) t1 (12, nueces, 345.6, 360000, 3)";
+        String insert13 = "insert into table (rowid, name, area, population, counselors) t1 (13, hudspeth, 534.3, 3400, 7)";
+        String insert14 = "insert into table (rowid, name, area, population, counselors) t1 (14, coryell, 789.3, 76000, 3)";
+        String insert15 = "insert into table (rowid, name, area, population, counselors) t1 (15, hays, 150.4, 190000, 5)";
+        String insert16 = "insert into table (rowid, name, area, population, counselors) t1 (16, glasscock, 150.4, 1300, 7)";
+        String insert17 = "insert into table (rowid, name, area, population, counselors) t1 (17, wilbarger, 150.4, 190000, 4)";
+        String insert18 = "insert into table (rowid, name, area, population, counselors) t1 (18, frio, 150.4, 19000, 7)";
 
 
         String query = "select * from t1";
 
         parseCreateTable(createTexasCounties);
-//        parseInsert(insert1);
-//        parseInsert(insert2);
-//        parseInsert(insert3);
-//        parseInsert(insert4);
-//        parseInsert(insert5);
-//        parseInsert(insert6);
-//        parseInsert(insert7);
-//        parseInsert(insert8);
-//        parseInsert(insert9);
-//        parseInsert(insert10);
-//        parseInsert(insert11);
-//        parseInsert(insert12);
-//        parseInsert(insert13);
-//        parseInsert(insert14);
-//        parseInsert(insert15);
-//        parseInsert(insert16);
-//        parseInsert(insert17);
-//        parseInsert(insert18);
+        parseInsert(insert1);
+        parseInsert(insert2);
+        parseInsert(insert3);
+        parseInsert(insert4);
+        parseInsert(insert5);
+        parseInsert(insert6);
+        parseInsert(insert7);
+        parseInsert(insert8);
+        parseInsert(insert9);
+        parseInsert(insert10);
+        parseInsert(insert11);
+        parseInsert(insert12);
+        parseInsert(insert13);
+        parseInsert(insert14);
+        parseInsert(insert15);
+        parseInsert(insert16);
+        parseInsert(insert17);
+        parseInsert(insert18);
         parseQuery(query);
 
     }

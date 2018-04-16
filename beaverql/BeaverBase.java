@@ -667,19 +667,20 @@ public class BeaverBase {
                             int newTextHeaderByte = newTextLength+0xC;
                             newRecord[6+changeOrdinalPosition-1] = (byte)newTextHeaderByte;
 
-                            //System.out.println("newRecord[7+changeOrdinalPosition-1] = " + newRecord[7+changeOrdinalPosition-1]);
-                            //System.out.println("newRecord[7+changeOrdinalPosition] = " + newRecord[7+changeOrdinalPosition]);
-
-                            //System.out.println(bytesToHex(newRecord));
-
-                            //System.out.println("(byte)newTextHeaderByte = " + (byte)newTextHeaderByte);
-
                             String deleteCommand = "delete from "+ tableName + " where rowid = " + Integer.toString(recordRowId);
 
-                            //System.out.println("changeOrdinalPosition = " + changeOrdinalPosition);
-
+                            /*delete the old record before replacing it*/
                             parseDelete(deleteCommand);
-                            insertByteArray(newRecord, tableName, newRecord.length);
+
+                            /*if new word is bigger it will be reinserted at a new location*/
+                            if (wordSizeDifference>0) {
+                                insertByteArray(newRecord, tableName, newRecord.length, false, recordLocation);
+                            }
+                            /*if not, it replaces the record in place*/
+                            else{
+                                insertByteArray(newRecord, tableName, newRecord.length, true, recordLocation);
+                            }
+
 
                             break;
                         default:
@@ -1446,7 +1447,12 @@ public class BeaverBase {
     }
 
     /*insert byte array into table -- helper method for update*/
-    public static void insertByteArray(byte[] record, String tableName, int recordPayloadLength) {
+    public static void insertByteArray(
+            byte[] record,
+            String tableName,
+            int recordPayloadLength,
+            boolean shorterFlag,
+            int originalAddress) {
         /*connect to correct table page*/
         int payloadLength = record.length;
 
@@ -1482,27 +1488,52 @@ public class BeaverBase {
             table.seek(pageStart+2);
             int startOfContent = table.readShort();
 
-            /*seek to correct location and write payload*/
-            int newStartOfContent = startOfContent - recordPayloadLength;
 
-            /*update start of content*/
-            table.seek(pageStart+2);
-            table.writeShort(newStartOfContent);
 
-            table.seek(newStartOfContent);
 
-            table.write(record);
+            /*if the new text value is shorter, we insert it in the same spot*/
+            if(shorterFlag){
+                table.seek(originalAddress);
+                table.write(record);
 
-            /*add record location to list*/
-            int recordPointerPosition = pageStart+8;
-            table.seek(recordPointerPosition);
-            int recordPointer = table.readShort();
-            while(recordPointer!=0){
-                recordPointerPosition+=2;
-                recordPointer = table.readShort();
+                /*add record location back list*/
+                //TODO recod location is deleted (changed to FF) when we call the delete method
+                //would be better to add a flag so that that doesn't happen.
+                int recordPointerPosition = pageStart+8;
+                table.seek(recordPointerPosition);
+                int recordPointer = table.readShort();
+                while(recordPointer!=0){
+                    recordPointerPosition+=2;
+                    recordPointer = table.readShort();
+                }
+
+                table.seek(recordPointerPosition);
+                table.writeShort(originalAddress);
             }
-            table.seek(recordPointerPosition);
-            table.writeShort(newStartOfContent);
+            /*otherwise write switch up the header and write in new location*/
+            else{
+                /*seek to correct location and write payload*/
+                int newStartOfContent = startOfContent - recordPayloadLength;
+
+                /*update start of content*/
+                table.seek(pageStart+2);
+                table.writeShort(newStartOfContent);
+
+                table.seek(newStartOfContent);
+                table.write(record);
+
+                /*add record location to list*/
+                int recordPointerPosition = pageStart+8;
+                table.seek(recordPointerPosition);
+                int recordPointer = table.readShort();
+                while(recordPointer!=0){
+                    recordPointerPosition+=2;
+                    recordPointer = table.readShort();
+                }
+
+                table.seek(recordPointerPosition);
+                table.writeShort(newStartOfContent);
+            }
 
             table.close();
         }
@@ -2584,19 +2615,19 @@ public class BeaverBase {
         String insert1  = "insert into table (rowid, name, area, population) t1 (1, archer, 150.4, 8809)";
         String insert2  = "insert into table (rowid, name, area, population) t1 (2, dallas, 345.6, 2987678)";
         String insert3  = "insert into table (rowid, name, area, population) t1 (3, jack, 534.3, 5476)";
-        String insert4  = "insert into table (rowid, name, area, population) t1 (4, montague, 789.3, 10292)";
-        String insert5  = "insert into table (rowid, name, area, population) t1 (5, anderson, 150.4, 9972)";
-        String insert6  = "insert into table (rowid, name, area, population) t1 (6, bexar, 150.4, 1900000)";
-        String insert7  = "insert into table (rowid, name, area, population) t1 (7, collin, 345.6, 910000)";
-        String insert8  = "insert into table (rowid, name, area, population) t1 (8, tarrant, 534.3, 2000000)";
-        String insert9  = "insert into table (rowid, name, area, population) t1 (9, williamson, 789.3, 510000)";
-        String insert10 = "insert into table (rowid, name, area, population) t1 (10, travis, 150.4, 1200000)";
-        String insert11 = "insert into table (rowid, name, area, population) t1 (11, comal, 150.4, 130000)";
-        String insert12 = "insert into table (rowid, name, area, population) t1 (12, nueces, 345.6, 360000)";
-        String insert13 = "insert into table (rowid, name, area, population) t1 (13, hudspeth, 534.3, 3400)";
-        String insert14 = "insert into table (rowid, name, area, population) t1 (14, coryell, 789.3, 76000)";
-        String insert15 = "insert into table (rowid, name, area, population) t1 (15, hays, 150.4, 190000)";
-        String insert16 = "insert into table (rowid, name, area, population) t1 (16, glasscock, 150.4, 1300)";
+//        String insert4  = "insert into table (rowid, name, area, population) t1 (4, montague, 789.3, 10292)";
+//        String insert5  = "insert into table (rowid, name, area, population) t1 (5, anderson, 150.4, 9972)";
+//        String insert6  = "insert into table (rowid, name, area, population) t1 (6, bexar, 150.4, 1900000)";
+//        String insert7  = "insert into table (rowid, name, area, population) t1 (7, collin, 345.6, 910000)";
+//        String insert8  = "insert into table (rowid, name, area, population) t1 (8, tarrant, 534.3, 2000000)";
+//        String insert9  = "insert into table (rowid, name, area, population) t1 (9, williamson, 789.3, 510000)";
+//        String insert10 = "insert into table (rowid, name, area, population) t1 (10, travis, 150.4, 1200000)";
+//        String insert11 = "insert into table (rowid, name, area, population) t1 (11, comal, 150.4, 130000)";
+//        String insert12 = "insert into table (rowid, name, area, population) t1 (12, nueces, 345.6, 360000)";
+//        String insert13 = "insert into table (rowid, name, area, population) t1 (13, hudspeth, 534.3, 3400)";
+//        String insert14 = "insert into table (rowid, name, area, population) t1 (14, coryell, 789.3, 76000)";
+//        String insert15 = "insert into table (rowid, name, area, population) t1 (15, hays, 150.4, 190000)";
+//        String insert16 = "insert into table (rowid, name, area, population) t1 (16, glasscock, 150.4, 1300)";
 
         String query = "select * from t1";
 
@@ -2604,19 +2635,19 @@ public class BeaverBase {
         parseInsert(insert1);
         parseInsert(insert2);
         parseInsert(insert3);
-        parseInsert(insert4);
-        parseInsert(insert5);
-        parseInsert(insert6);
-        parseInsert(insert7);
-        parseInsert(insert8);
-        parseInsert(insert9);
-        parseInsert(insert10);
-        parseInsert(insert11);
-        parseInsert(insert12);
-        parseInsert(insert13);
-        parseInsert(insert14);
-        parseInsert(insert15);
-        parseInsert(insert16);
+//        parseInsert(insert4);
+//        parseInsert(insert5);
+//        parseInsert(insert6);
+//        parseInsert(insert7);
+//        parseInsert(insert8);
+//        parseInsert(insert9);
+//        parseInsert(insert10);
+//        parseInsert(insert11);
+//        parseInsert(insert12);
+//        parseInsert(insert13);
+//        parseInsert(insert14);
+//        parseInsert(insert15);
+//        parseInsert(insert16);
         parseQuery(query);
 
     }

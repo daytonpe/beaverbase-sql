@@ -2260,177 +2260,193 @@ public class BeaverBase {
                 table = new RandomAccessFile("data/user_data/"+tableName+".tbl", "rw");
             }
 
-            /*determine number of records*/
-            table.seek(1);
-            int recordCount = table.read();
+            /*outer while loop searches through all the pages in the file*/
+            table.seek(4);
+            int pagePointer = table.readInt();
+            int pageNumber = 1;
+            int pageStart = 0;
 
-            /*get a copy for looping purposes*/
-            table.seek(1);
-            int originalRecordCount = table.read();
+            /*loop through each of the pages, flow control at the bottom*/
+            while(true){
 
-            /*if record count == 0 then then we can just break*/
-            if (recordCount == 0)
-                return;
+                /*determine number of records*/
+                table.seek(pageStart+1);
+                int recordCount = table.read();
 
-            int tablePointer = 8;
+                /*get a copy for looping purposes*/
+                table.seek(pageStart+1);
+                int originalRecordCount = table.read();
 
-            /*
-            recordCount will change if we delete a record. So we can't use it for looping through a page
-            deleted record pointers will count in our looping value.
-            */
-            int recordsVisited = 0;
+                /*
+                recordCount will change if we delete a record. So we can't use it for looping through a page
+                deleted record pointers will count in our looping value.
+                */
+                int recordsVisited = 0;
+                int recordPointer = pageStart+8;
+                String recordConstraintType = "";
 
-            /*linear search records for those that match our query*/
-            do{
-                table.seek(tablePointer);
-                int recordLocation = table.readShort();
 
-                tablePointer+=2;
-                /*checkpoint -- if record has been deleted, do not continue*/
-                if (recordLocation == -1)
-                    continue;
-                recordsVisited++;
+                /*linear search records for those that match our query*/
+                do{
+                    table.seek(recordPointer);
+                    int recordLocation = table.readShort();
 
-                /*seek to record*/
-                table.seek(recordLocation);
+                    recordPointer+=2;
+                    /*checkpoint -- if record has been deleted, do not continue*/
+                    if (recordLocation == -1)
+                        continue;
+                    recordsVisited++;
 
-                /*save values that are always at same offsets*/
-                int recordPayloadLength = table.readShort();
-                int rowId = table.readInt();
-                int numColumns = table.readByte();
-
-                int recordConstraintOffset = 0;
-
-                /*if there are constraints, we must have a way to match against the constraint*/
-                boolean foundMatch = false;
-
-                /*check each of the entries to see if they match the constraint*/
-                if(hasConstraint){
-                    /*determine data type of constraint*/
-                    String recordConstraintType = dataTypeList.get(constraintOrdinalPosition-1);
-
-                    recordConstraintOffset = 7 + numColumns; //this will always be the same as a starting point
-                    for (int j = 1; j < constraintOrdinalPosition-1; j++) {
-
-                        recordConstraintOffset+=getContentSize(dataTypeList.get(j)); //accounted for all but the strings
-
-                        int columnTypeByte = table.readByte();
-                        //System.out.println("columnTypeByte = " + columnTypeByte);
-
-                        if (columnTypeByte>0xB) { //if we find a TEXT type
-                            recordConstraintOffset+= (columnTypeByte -0xC);
-                            //System.out.println("adding "+(columnTypeByte -0xC));
-                        }
-                    }
-                    if(recordConstraintType.equals("TEXT")){
-                        textConstraintLength = table.readByte() - 0xC;
-                    }
-                    if(constraintColumn.equals("rowid")){
-                        recordConstraintOffset = 2;
-                    }
-
-                    table.seek(recordLocation+recordConstraintOffset);
-
-                    if (recordConstraintType.equals("TEXT")) {
-                        byte[] temp = new byte[textConstraintLength];
-                        table.read(temp);
-                        String actualConstraintValue1 = new String(temp);
-                        //System.out.println("actualConstraintValue1 =? constraintValue : " + actualConstraintValue1 +" =? "+constraintValue);
-
-                        /* Test if we match constraint depending on constraint operator.
-                        For TEXT data type only != and = are sensical */
-                        switch (constraintOperator) {
-                            case "=":
-                                foundMatch = actualConstraintValue1.equals(constraintValue);
-                                break;
-                            case "!=":
-                                foundMatch = !actualConstraintValue1.equals(constraintValue);
-                                break;
-                            default:
-                                throw new Error("Invalid constraint "+constraintOperator);
-                        }
-                    }
-                    else{
-                        switch (recordConstraintType) {
-                            case "TINYINT":
-                                int actualConstraintValue2 = table.readByte();
-                                //System.out.println("actualConstraintValue2 = "+actualConstraintValue2);
-                                foundMatch = checkIntConstraint(actualConstraintValue2, Integer.parseInt(constraintValue), constraintOperator);
-                                break;
-                            case "SMALLINT":
-                                int actualConstraintValue3 = table.readShort();
-                                //System.out.println("actualConstraintValue3 = "+actualConstraintValue3);
-                                foundMatch = checkIntConstraint(actualConstraintValue3, Integer.parseInt(constraintValue), constraintOperator);
-                                break;
-                            case "INT":
-                                //System.out.println("pointer: "+table.getFilePointer());
-                                int actualConstraintValue4 = table.readInt();
-                                //System.out.println("actualConstraintValue4 = "+actualConstraintValue4);
-                                //System.out.println("actualConstraintValue4 =? constraintValue :" + actualConstraintValue4 +" =? "+constraintValue);
-                                //System.out.println("");
-                                foundMatch = checkIntConstraint(actualConstraintValue4, Integer.parseInt(constraintValue), constraintOperator);
-                                break;
-                            case "BIGINT":
-                                double actualConstraintValue5 = table.readLong();
-                                //System.out.println("actualConstraintValue5 = "+actualConstraintValue5);
-                                foundMatch = checkDoubleConstraint(actualConstraintValue5, Double.parseDouble(constraintValue), constraintOperator);
-                                break;
-                            case "REAL":
-                                int actualConstraintValue6 = table.readInt();
-                                //System.out.println("actualConstraintValue6 = "+actualConstraintValue6);
-                                foundMatch = checkIntConstraint(actualConstraintValue6, Integer.parseInt(constraintValue), constraintOperator);
-                                break;
-                            case "DOUBLE":
-                                //System.out.println("pointer: "+table.getFilePointer());
-                                double actualConstraintValue7 = table.readDouble();
-                                //System.out.println("actualConstraintValue7 = "+actualConstraintValue7);
-                                //System.out.println("actualConstraintValue7 =? constraintValue :" + actualConstraintValue7 +" =? "+constraintValue);
-                                foundMatch = checkDoubleConstraint(actualConstraintValue7, Double.parseDouble(constraintValue), constraintOperator);
-                                break;
-                            case "DATETIME":
-                                double actualConstraintValue8 = table.readLong();
-                                //System.out.println("actualConstraintValue8 = "+actualConstraintValue8);
-                                foundMatch = checkDoubleConstraint(actualConstraintValue8, Double.parseDouble(constraintValue), constraintOperator);
-                                break;
-                            case "DATE":
-                                double actualConstraintValue9 = table.readLong();
-                                //System.out.println("actualConstraintValue9 = "+actualConstraintValue9);
-                                foundMatch = checkDoubleConstraint(actualConstraintValue9, Double.parseDouble(constraintValue), constraintOperator);
-                                break;
-                            default:
-                                throw new Error("Not a valid data type: "+recordConstraintType);
-                        }
-                    }
-                } else {
-                    foundMatch = true;
-                }
-
-                /*if we found a match, delete the record and update the header*/
-                if (foundMatch){
-                    /*delete record*/
+                    /*seek to record*/
                     table.seek(recordLocation);
-                    byte[] blankArray = new byte[7 + numColumns + recordPayloadLength];
-                    table.write(blankArray);
 
-                    /*update pointer*/
-                    /*TODO this is ugly, but it works for now.*/
-                    if (!updateShorterTextFlag) {
-                        tablePointer-=2;
-                        table.seek(tablePointer);
-                        table.writeShort(-1);
-                        tablePointer+=2;
+                    /*save values that are always at same offsets*/
+                    int recordPayloadLength = table.readShort();
+                    int rowId = table.readInt();
+                    int numColumns = table.readByte();
+
+                    int recordConstraintOffset = 0;
+
+                    /*if there are constraints, we must have a way to match against the constraint*/
+                    boolean foundMatch = false;
+
+                    /*check each of the entries to see if they match the constraint*/
+                    if(hasConstraint){
+                        /*determine data type of constraint*/
+                        recordConstraintType = dataTypeList.get(constraintOrdinalPosition-1);
+
+                        recordConstraintOffset = 7 + numColumns; //this will always be the same as a starting point
+                        for (int j = 1; j < constraintOrdinalPosition-1; j++) {
+
+                            recordConstraintOffset+=getContentSize(dataTypeList.get(j)); //accounted for all but the strings
+
+                            int columnTypeByte = table.readByte();
+                            //System.out.println("columnTypeByte = " + columnTypeByte);
+
+                            if (columnTypeByte>0xB) { //if we find a TEXT type
+                                recordConstraintOffset+= (columnTypeByte -0xC);
+                                //System.out.println("adding "+(columnTypeByte -0xC));
+                            }
+                        }
+                        if(recordConstraintType.equals("TEXT")){
+                            textConstraintLength = table.readByte() - 0xC;
+                        }
+                        if(constraintColumn.equals("rowid")){
+                            recordConstraintOffset = 2;
+                        }
+
+                        table.seek(recordLocation+recordConstraintOffset);
+
+                        if (recordConstraintType.equals("TEXT")) {
+                            byte[] temp = new byte[textConstraintLength];
+                            table.read(temp);
+                            String actualConstraintValue1 = new String(temp);
+                            //System.out.println("actualConstraintValue1 =? constraintValue : " + actualConstraintValue1 +" =? "+constraintValue);
+
+                            /* Test if we match constraint depending on constraint operator.
+                            For TEXT data type only != and = are sensical */
+                            switch (constraintOperator) {
+                                case "=":
+                                    foundMatch = actualConstraintValue1.equals(constraintValue);
+                                    break;
+                                case "!=":
+                                    foundMatch = !actualConstraintValue1.equals(constraintValue);
+                                    break;
+                                default:
+                                    throw new Error("Invalid constraint "+constraintOperator);
+                            }
+                        }
+                        else{
+                            switch (recordConstraintType) {
+                                case "TINYINT":
+                                    int actualConstraintValue2 = table.readByte();
+                                    //System.out.println("actualConstraintValue2 = "+actualConstraintValue2);
+                                    foundMatch = checkIntConstraint(actualConstraintValue2, Integer.parseInt(constraintValue), constraintOperator);
+                                    break;
+                                case "SMALLINT":
+                                    int actualConstraintValue3 = table.readShort();
+                                    //System.out.println("actualConstraintValue3 = "+actualConstraintValue3);
+                                    foundMatch = checkIntConstraint(actualConstraintValue3, Integer.parseInt(constraintValue), constraintOperator);
+                                    break;
+                                case "INT":
+                                    //System.out.println("pointer: "+table.getFilePointer());
+                                    int actualConstraintValue4 = table.readInt();
+                                    //System.out.println("actualConstraintValue4 = "+actualConstraintValue4);
+                                    //System.out.println("actualConstraintValue4 =? constraintValue :" + actualConstraintValue4 +" =? "+constraintValue);
+                                    //System.out.println("");
+                                    foundMatch = checkIntConstraint(actualConstraintValue4, Integer.parseInt(constraintValue), constraintOperator);
+                                    break;
+                                case "BIGINT":
+                                    double actualConstraintValue5 = table.readLong();
+                                    //System.out.println("actualConstraintValue5 = "+actualConstraintValue5);
+                                    foundMatch = checkDoubleConstraint(actualConstraintValue5, Double.parseDouble(constraintValue), constraintOperator);
+                                    break;
+                                case "REAL":
+                                    int actualConstraintValue6 = table.readInt();
+                                    //System.out.println("actualConstraintValue6 = "+actualConstraintValue6);
+                                    foundMatch = checkIntConstraint(actualConstraintValue6, Integer.parseInt(constraintValue), constraintOperator);
+                                    break;
+                                case "DOUBLE":
+                                    //System.out.println("pointer: "+table.getFilePointer());
+                                    double actualConstraintValue7 = table.readDouble();
+                                    //System.out.println("actualConstraintValue7 = "+actualConstraintValue7);
+                                    //System.out.println("actualConstraintValue7 =? constraintValue :" + actualConstraintValue7 +" =? "+constraintValue);
+                                    foundMatch = checkDoubleConstraint(actualConstraintValue7, Double.parseDouble(constraintValue), constraintOperator);
+                                    break;
+                                case "DATETIME":
+                                    double actualConstraintValue8 = table.readLong();
+                                    //System.out.println("actualConstraintValue8 = "+actualConstraintValue8);
+                                    foundMatch = checkDoubleConstraint(actualConstraintValue8, Double.parseDouble(constraintValue), constraintOperator);
+                                    break;
+                                case "DATE":
+                                    double actualConstraintValue9 = table.readLong();
+                                    //System.out.println("actualConstraintValue9 = "+actualConstraintValue9);
+                                    foundMatch = checkDoubleConstraint(actualConstraintValue9, Double.parseDouble(constraintValue), constraintOperator);
+                                    break;
+                                default:
+                                    throw new Error("Not a valid data type: "+recordConstraintType);
+                            }
+                        }
+                    } else {
+                        foundMatch = true;
                     }
 
-                    /*update record count*/
-                    recordCount--;
-                    table.seek(1);
-                    table.writeByte(recordCount);
+                    /*if we found a match, delete the record and update the header*/
+                    if (foundMatch){
+                        /*delete record*/
+                        table.seek(recordLocation);
+                        byte[] blankArray = new byte[7 + numColumns + recordPayloadLength];
+                        table.write(blankArray);
 
+                        /*update pointer*/
+                        /*TODO this is ugly, but it works for now.*/
+                        if (!updateShorterTextFlag) {
+                            recordPointer-=2;
+                            table.seek(recordPointer);
+                            table.writeShort(-1);
+                            recordPointer+=2;
+                        }
+
+                        /*update record count*/
+                        recordCount--;
+                        table.seek(pageStart + 1);
+                        table.writeByte(recordCount);
+                    }
+                } while (recordsVisited < originalRecordCount);
+
+                /*if the page we just visited has no following pages, close and return*/
+                if(pagePointer == -1){
+                    /*close out of table*/
+                    table.close();
+                    System.out.println();
+                    return;
                 }
-            } while (recordsVisited < originalRecordCount);
-
-            /*close out of table*/
-            table.close();
+                /*since we are reading through from first page to last we need to increment these at the end*/
+                pageStart+=pageSize;
+                table.seek(pageStart+4);
+                pagePointer = table.readInt();
+                pageNumber++;
+            }
         }
         catch(IOException e) {
             System.out.println(e);
@@ -2610,19 +2626,22 @@ public class BeaverBase {
         String insert1  = "insert into table (rowid, name, area, population) t1 (1, archer, 150.4, 8809)";
         String insert2  = "insert into table (rowid, name, area, population) t1 (2, dallas, 345.6, 2987678)";
         String insert3  = "insert into table (rowid, name, area, population) t1 (3, jack, 534.3, 5476)";
-//        String insert4  = "insert into table (rowid, name, area, population) t1 (4, montague, 789.3, 10292)";
-//        String insert5  = "insert into table (rowid, name, area, population) t1 (5, anderson, 150.4, 9972)";
-//        String insert6  = "insert into table (rowid, name, area, population) t1 (6, bexar, 150.4, 1900000)";
-//        String insert7  = "insert into table (rowid, name, area, population) t1 (7, collin, 345.6, 910000)";
-//        String insert8  = "insert into table (rowid, name, area, population) t1 (8, tarrant, 534.3, 2000000)";
-//        String insert9  = "insert into table (rowid, name, area, population) t1 (9, williamson, 789.3, 510000)";
-//        String insert10 = "insert into table (rowid, name, area, population) t1 (10, travis, 150.4, 1200000)";
-//        String insert11 = "insert into table (rowid, name, area, population) t1 (11, comal, 150.4, 130000)";
-//        String insert12 = "insert into table (rowid, name, area, population) t1 (12, nueces, 345.6, 360000)";
-//        String insert13 = "insert into table (rowid, name, area, population) t1 (13, hudspeth, 534.3, 3400)";
-//        String insert14 = "insert into table (rowid, name, area, population) t1 (14, coryell, 789.3, 76000)";
-//        String insert15 = "insert into table (rowid, name, area, population) t1 (15, hays, 150.4, 190000)";
-//        String insert16 = "insert into table (rowid, name, area, population) t1 (16, glasscock, 150.4, 1300)";
+        String insert4  = "insert into table (rowid, name, area, population) t1 (4, montague, 789.3, 10292)";
+        String insert5  = "insert into table (rowid, name, area, population) t1 (5, anderson, 150.4, 9972)";
+        String insert6  = "insert into table (rowid, name, area, population) t1 (6, bexar, 150.4, 1900000)";
+        String insert7  = "insert into table (rowid, name, area, population) t1 (7, collin, 345.6, 910000)";
+        String insert8  = "insert into table (rowid, name, area, population) t1 (8, tarrant, 534.3, 2000000)";
+        String insert9  = "insert into table (rowid, name, area, population) t1 (9, williamson, 789.3, 510000)";
+        String insert10 = "insert into table (rowid, name, area, population) t1 (10, travis, 150.4, 1200000)";
+        String insert11 = "insert into table (rowid, name, area, population) t1 (11, comal, 150.4, 130000)";
+        String insert12 = "insert into table (rowid, name, area, population) t1 (12, nueces, 345.6, 360000)";
+        String insert13 = "insert into table (rowid, name, area, population) t1 (13, hudspeth, 534.3, 3400)";
+        String insert14 = "insert into table (rowid, name, area, population) t1 (14, coryell, 789.3, 76000)";
+        String insert15 = "insert into table (rowid, name, area, population) t1 (15, hays, 150.4, 190000)";
+        String insert16 = "insert into table (rowid, name, area, population) t1 (16, glasscock, 150.4, 1300)";
+        String insert17 = "insert into table (rowid, name, area, population) t1 (17, wilbarger, 150.4, 190000)";
+        String insert18 = "insert into table (rowid, name, area, population) t1 (18, frio, 150.4, 19000)";
+
 
         String query = "select * from t1";
 
@@ -2630,19 +2649,21 @@ public class BeaverBase {
         parseInsert(insert1);
         parseInsert(insert2);
         parseInsert(insert3);
-//        parseInsert(insert4);
-//        parseInsert(insert5);
-//        parseInsert(insert6);
-//        parseInsert(insert7);
-//        parseInsert(insert8);
-//        parseInsert(insert9);
-//        parseInsert(insert10);
-//        parseInsert(insert11);
-//        parseInsert(insert12);
-//        parseInsert(insert13);
-//        parseInsert(insert14);
-//        parseInsert(insert15);
-//        parseInsert(insert16);
+        parseInsert(insert4);
+        parseInsert(insert5);
+        parseInsert(insert6);
+        parseInsert(insert7);
+        parseInsert(insert8);
+        parseInsert(insert9);
+        parseInsert(insert10);
+        parseInsert(insert11);
+        parseInsert(insert12);
+        parseInsert(insert13);
+        parseInsert(insert14);
+        parseInsert(insert15);
+        parseInsert(insert16);
+        parseInsert(insert17);
+        parseInsert(insert18);
         parseQuery(query);
 
     }
@@ -2708,13 +2729,11 @@ public class BeaverBase {
     }
 
     public static void test2(){
-        String insert17 = "insert into table (rowid, name, area, population) t1 (16, wilbarger, 150.4, 190000)";
-        parseInsert(insert17);
+
     }
 
     public static void test3(){
-        String insert18 = "insert into table (rowid, name, area, population) t1 (17, frio, 150.4, 19000)";
-        parseInsert(insert18);
+
     }
 
     /*add one pagelength worth of bytes to a .tbl file*/

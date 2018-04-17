@@ -2685,7 +2685,7 @@ public class BeaverBase {
 
     public static void test1(){
         String createTexasCounties = "create t2 ( "
-                + "rowid int, "
+                + "rowid int primary key, "
                 + "name text not nullable, "
                 + "area double, "
                 + "population bigint, "
@@ -2698,25 +2698,25 @@ public class BeaverBase {
                 + " )";
 
         String insert1  = "insert into table (rowid, name, area, population, counselors, zip, parks, avg_age, founded, holiday) t2 (1, archer, 150.4, 8809, 7, 75111, 2, 43.21, 687943532123, 1531618670000)";
-        String insert2  = "insert into table (rowid, name, area, population, counselors, zip, parks, avg_age, founded, holiday) t2 (2, dallas, 345.6, 2987678, 8, 75112, 299, 41.31, 687943532123, 1531618670000)";
+        String insert2  = "insert into table (rowid, name, area, population, counselors, zip, parks, avg_age, founded, holiday) t2 (2, dallas, 345.6, 2987678, 8, 75112, null, 41.31, 687943532123, 1531618670000)";
         String insert3  = "insert into table (rowid, name, area, population, counselors, zip, parks, avg_age, founded, holiday) t2 (3, jack, 534.3, 5476, 8, 75113, 23, 36.90, 687943532123, 1531618670000)";
-        String insert4  = "insert into table (rowid, name, area, population, counselors, zip, parks, avg_age, founded, holiday) t2 (4, montague, 789.3, 10292, 7, 75114, 13, 38.23, 687943532321, 1531618670000)";
+        String insert4  = "insert into table (rowid, name, area, population, counselors, zip, parks, avg_age, founded, holiday) t2 (4, montague, 789.3, 10292, 7, 75114, 13, null, 687943532321, null)";
         String insert5  = "insert into table (rowid, name, area, population, counselors, zip, parks, avg_age, founded, holiday) t2 (5, anderson, 150.4, 9972, 9, 75115, 98, 33.87, 687943533212, 1531618670000)";
         String insert6  = "insert into table (rowid, name, area, population, counselors, zip, parks, avg_age, founded, holiday) t2 (6, bexar, 150.4, 1900000, 6, 75116, 4, 34.67, 687943531232, 1531618670000)";
         String insert7  = "insert into table (rowid, name, area, population, counselors, zip, parks, avg_age, founded, holiday) t2 (7, collin, 345.6, 910000, 7, 75117, 89, 37.80, 687943532312, 1531618670000)";
         String insert8  = "insert into table (rowid, name, area, population, counselors, zip, parks, avg_age, founded, holiday) t2 (8, tarrant, 534.3, 2000000, 4, 75118, 43, 36.09, 687943532123, 1531618670000)";
-        String insert9  = "insert into table (rowid, name, area, population, counselors, zip, parks, avg_age, founded, holiday) t2 (9, williamson, 789.3, 510000, 3, 75119, 25, 31.95, 687943532321, 1531618670000)";
+        String insert9  = "insert into table (rowid, name, area, population, counselors, zip, parks, avg_age, founded, holiday) t2 (9, williamson, 789.3, 510000, 3, 75119, 25, 31.95, null, 1531618670000)";
         String insert10 = "insert into table (rowid, name, area, population, counselors, zip, parks, avg_age, founded, holiday) t2 (10, travis, 150.4, 1200000, 7, 75120, 65, 29.17, 687943532123, 1531618670000)";
         String insert11 = "insert into table (rowid, name, area, population, counselors, zip, parks, avg_age, founded, holiday) t2 (11, comal, 150.4, 130000, 8, 75121, 2, 28.21, 687943532234, 1531618670000)";
-        String insert12 = "insert into table (rowid, name, area, population, counselors, zip, parks, avg_age, founded, holiday) t2 (12, nueces, 345.6, 360000, 3, 75122, 20, 40.15, 687943532342, 1531618670000)";
+        String insert12 = "insert into table (rowid, name, area, population, counselors, zip, parks, avg_age, founded, holiday) t2 (12, nueces, 345.6, 360000, 3, null, 20, 40.15, 687943532342, 1531618670000)";
         String insert13 = "insert into table (rowid, name, area, population, counselors, zip, parks, avg_age, founded, holiday) t2 (13, hudspeth, 534.3, 3400, 7, 75123, 10, 44.99, 687943532345, 1531618670000)";
-        String insert14 = "insert into table (rowid, name, area, population, counselors, zip, parks, avg_age, founded, holiday) t2 (14, coryell, 789.3, 76000, 3, 75124, 17, 50.00, 687943536452, 1531618670000)";
-        String insert15 = "insert into table (rowid, name, area, population, counselors, zip, parks, avg_age, founded, holiday) t2 (15, hays, 150.4, 190000, 5, 75125, 13, 43.12, 687943534562, 1531618670000)";
+        String insert14 = "insert into table (rowid, name, area, population, counselors, zip, parks, avg_age, founded, holiday) t2 (14, coryell, 789.3, 76000, 3, null, 17, 50.00, 687943536452, 1531618670000)";
+        String insert15 = "insert into table (rowid, name, area, population, counselors, zip, parks, avg_age, founded, holiday) t2 (15, hays, 150.4, 190000, 5, 75125, 13, 43.12, 687943534562, null)";
         String insert16 = "insert into table (rowid, name, area, population, counselors, zip, parks, avg_age, founded, holiday) t2 (16, glasscock, 150.4, 1300, 7, 75125, 87, 27.54, 687943535672, 1531618670000)";
-        String insert17 = "insert into table (rowid, name, area, population, counselors, zip, parks, avg_age, founded, holiday) t2 (17, wilbarger, 150.4, 190000, 4, 75126, 7, 29.21, 687943538762, 1531618670000)";
-        String insert18 = "insert into table (rowid, name, area, population, counselors, zip, parks, avg_age, founded, holiday) t2 (18, frio, 150.4, 19000, 7, 75127, 6, 33.12, 687943539082, 1531618670000)";
+        String insert17 = "insert into table (rowid, name, area, population, counselors, zip, parks, avg_age, founded, holiday) t2 (17, wilbarger, 150.4, null, 4, 75126, 7, 29.21, 687943538762, 1531618670000)";
+        String insert18 = "insert into table (rowid, name, area, population, counselors, zip, parks, avg_age, founded, holiday) t2 (18, frio, 150.4, 19000, 7, 75127, 6, 33.12, null, 1531618670000)";
 
-        String query = "select * from t1";
+        String query = "select * from t2";
 
         parseCreateTable(createTexasCounties);
         parseInsert(insert1);

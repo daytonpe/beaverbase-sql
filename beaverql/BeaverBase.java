@@ -150,7 +150,7 @@ public class BeaverBase {
                 dropTable(userCommand);
                 break;
             case "create":
-                parseCreateTable(userCommand);
+                parseCreateTable2(userCommand);
                 break;
             case "update":
                 parseUpdate(userCommand);
@@ -859,6 +859,14 @@ public class BeaverBase {
             return 0;
         }
         switch (dataType) {
+            case 0x0:
+                return 1;
+            case 0x1:
+                return 2;
+            case 0x2:
+                return 4;
+            case 0x3:
+                return 8;
             case 0x4:
                 return 1;
             case 0x5:
@@ -886,6 +894,14 @@ public class BeaverBase {
             return "TEXT";
         }
         switch (typeCode) {
+            case 0x0:
+                return "NULL";
+            case 0x1:
+                return "NULL";
+            case 0x2:
+                return "NULL";
+            case 0x3:
+                return "NULL";
             case 0x4:
                 return "TINYINT";
             case 0x5:
@@ -1143,48 +1159,39 @@ public class BeaverBase {
                     }
                     else{
                         switch (recordConstraintType) {
+                            case "NULL":
+                                foundMatch = false;
+                                break;
                             case "TINYINT":
                                 int actualConstraintValue2 = table.readByte();
-                                //System.out.println("actualConstraintValue2 = "+actualConstraintValue2);
                                 foundMatch = checkIntConstraint(actualConstraintValue2, Integer.parseInt(constraintValue), constraintOperator);
                                 break;
                             case "SMALLINT":
                                 int actualConstraintValue3 = table.readShort();
-                                //System.out.println("actualConstraintValue3 = "+actualConstraintValue3);
                                 foundMatch = checkIntConstraint(actualConstraintValue3, Integer.parseInt(constraintValue), constraintOperator);
                                 break;
                             case "INT":
-                                //System.out.println("pointer: "+table.getFilePointer());
                                 int actualConstraintValue4 = table.readInt();
-                                //System.out.println("actualConstraintValue4 = "+actualConstraintValue4);
-                                //System.out.println("actualConstraintValue4 =? constraintValue :" + actualConstraintValue4 +" =? "+constraintValue);
                                 foundMatch = checkIntConstraint(actualConstraintValue4, Integer.parseInt(constraintValue), constraintOperator);
                                 break;
                             case "BIGINT":
                                 long actualConstraintValue5 = table.readLong();
-                                //System.out.println("actualConstraintValue5 = "+actualConstraintValue5);
                                 foundMatch = checkDoubleConstraint(actualConstraintValue5, Double.parseDouble(constraintValue), constraintOperator);
                                 break;
                             case "REAL":
                                 float actualConstraintValue6 = table.readFloat();
-                                //System.out.println("actualConstraintValue6 = "+actualConstraintValue6);
                                 foundMatch = checkFloatConstraint(actualConstraintValue6, Float.parseFloat(constraintValue), constraintOperator);
                                 break;
                             case "DOUBLE":
-                                //System.out.println("pointer: "+table.getFilePointer());
                                 double actualConstraintValue7 = table.readDouble();
-                                //System.out.println("actualConstraintValue7 = "+actualConstraintValue7);
-                                //System.out.println("actualConstraintValue7 =? constraintValue :" + actualConstraintValue7 +" =? "+constraintValue);
                                 foundMatch = checkDoubleConstraint(actualConstraintValue7, Double.parseDouble(constraintValue), constraintOperator);
                                 break;
                             case "DATETIME":
                                 long actualConstraintValue8 = table.readLong();
-                                //System.out.println("actualConstraintValue8 = "+actualConstraintValue8);
                                 foundMatch = checkLongConstraint(actualConstraintValue8, Long.parseLong(constraintValue), constraintOperator);
                                 break;
                             case "DATE":
                                 long actualConstraintValue9 = table.readLong();
-                                //System.out.println("actualConstraintValue9 = "+actualConstraintValue9);
                                 foundMatch = checkLongConstraint(actualConstraintValue9, Long.parseLong(constraintValue), constraintOperator);
                                 break;
                             default:
@@ -1217,7 +1224,6 @@ public class BeaverBase {
 
 
                         table.seek(recordPayloadPointer);
-                        //System.out.println("record payload start = " + (recordLocation+7+numColumns));
                         for (int j = 1; j < booleanPrintList.size(); j++) {
 
                             /*get the hex value of the datatype*/
@@ -1228,6 +1234,9 @@ public class BeaverBase {
                                 /*print it based on what type it is*/
                                 table.seek(recordPayloadPointer);
                                 switch (convertTypeCode(dataType)) {
+                                    case "NULL":
+                                        System.out.print(String.format("%-16s" , "NULL"));
+                                        break;
                                     case "TINYINT":
                                         int printValue2 = table.readByte();
                                         System.out.print(String.format("%-16s" , printValue2));
@@ -1432,30 +1441,63 @@ public class BeaverBase {
             table.writeByte(columnListActual.size()-1);
             /*first the serial typecodes*/
             for (int i = 1; i < dataTypeList.size(); i++) {
+                boolean isNull = orderedValueList.get(i).toLowerCase().replace(" ", "").replace(",", "").equals("null");
                 switch (dataTypeList.get(i)) {
                     case "TINYINT":
-                        table.write(0x4);
+                        if (isNull) {
+                            table.write(0x0);
+                        } else {
+                            table.write(0x4);
+                        }
                         break;
                     case "SMALLINT":
-                        table.write(0x5);
+                        if (isNull) {
+                            table.write(0x1);
+                        } else {
+                            table.write(0x5);
+                        }
                         break;
                     case "INT":
-                        table.write(0x6);
+                        if (isNull) {
+                            table.write(0x2);
+                        } else {
+                            table.write(0x6);
+                        }
                         break;
                     case "BIGINT":
-                        table.write(0x7);
+                        if (isNull) {
+                            table.write(0x3);
+                        } else {
+                            table.write(0x7);
+                        }
                         break;
                     case "REAL":
-                        table.write(0x8);
+                        if (isNull) {
+                            table.write(0x2);
+                        } else {
+                            table.write(0x8);
+                        }
                         break;
                     case "DOUBLE":
-                        table.write(0x9);
+                        if (isNull) {
+                            table.write(0x3);
+                        } else {
+                            table.write(0x9);
+                        }
                         break;
                     case "DATETIME":
-                        table.write(0xA);
+                        if (isNull) {
+                            table.write(0x3);
+                        } else {
+                            table.write(0xA);
+                        }
                         break;
                     case "DATE":
-                        table.write(0xB);
+                        if (isNull) {
+                            table.write(0x3);
+                        } else {
+                            table.write(0xB);
+                        }
                         break;
                     case "TEXT":
                         table.write(0xC+orderedValueList.get(i).length());
@@ -1467,30 +1509,63 @@ public class BeaverBase {
             }
             /*then the actual values*/
             for (int i = 1; i < dataTypeList.size(); i++) {
+                boolean isNull = orderedValueList.get(i).toLowerCase().replace(" ", "").replace(",", "").equals("null");
                 switch (dataTypeList.get(i)) {
                     case "TINYINT":
-                        table.writeByte(Integer.parseInt(orderedValueList.get(i)));
+                        if(isNull){
+                            table.writeByte(0);
+                        } else{
+                            table.writeByte(Integer.parseInt(orderedValueList.get(i)));
+                        }
                         break;
                     case "SMALLINT":
-                        table.writeShort(Integer.parseInt(orderedValueList.get(i)));
+                        if(isNull){
+                            table.writeShort(0);
+                        } else {
+                            table.writeShort(Integer.parseInt(orderedValueList.get(i)));
+                        }
                         break;
                     case "INT":
-                        table.writeInt(Integer.parseInt(orderedValueList.get(i)));
+                        if (isNull) {
+                            table.writeInt(0);
+                        } else {
+                            table.writeInt(Integer.parseInt(orderedValueList.get(i)));
+                        }
                         break;
                     case "BIGINT":
-                        table.writeLong(Long.parseLong(orderedValueList.get(i)));
+                        if (isNull){
+                            table.writeLong(0);
+                        } else {
+                            table.writeLong(Long.parseLong(orderedValueList.get(i)));
+                        }
                         break;
                     case "REAL":
-                        table.writeFloat(Float.parseFloat(orderedValueList.get(i)));
+                        if (isNull){
+                            table.writeFloat(0);
+                        } else {
+                            table.writeFloat(Float.parseFloat(orderedValueList.get(i)));
+                        }
                         break;
                     case "DOUBLE":
-                        table.writeDouble(Double.parseDouble(orderedValueList.get(i)));
+                        if (isNull){
+                            table.writeDouble(0);
+                        } else {
+                            table.writeDouble(Double.parseDouble(orderedValueList.get(i)));
+                        }
                         break;
                     case "DATETIME":
-                        table.writeLong(Long.parseLong(orderedValueList.get(i)));
+                        if (isNull){
+                            table.writeLong(0);
+                        } else {
+                            table.writeLong(Long.parseLong(orderedValueList.get(i)));
+                        }
                         break;
                     case "DATE":
-                        table.writeLong(Long.parseLong(orderedValueList.get(i)));
+                        if (isNull){
+                            table.writeLong(0);
+                        } else {
+                            table.writeLong(Long.parseLong(orderedValueList.get(i)));
+                        }
                         break;
                     case "TEXT":
                         table.write(orderedValueList.get(i).getBytes());
@@ -1668,6 +1743,11 @@ public class BeaverBase {
         System.out.println();
     }
 
+    public static void parseCreateTable2(String createTableString) {
+        System.out.println("createTableString = " + createTableString);
+
+    }
+
     /*create new table*/
     public static void parseCreateTable(String createTableString) {
 
@@ -1688,12 +1768,15 @@ public class BeaverBase {
         int payloadSize = 0; //number of bytes in the payload
         int numColumns = 0;
         ArrayList<Integer> recordPayloadHeader = new ArrayList<>();
-        ArrayList<Integer> recordPayloadContent = new ArrayList<>();
         ArrayList<String> columnList = new ArrayList<>();
         ArrayList<String> columnDataTypeList = new ArrayList<>();
         ArrayList<String> isNullableList = new ArrayList<>();
         ArrayList<Integer> dataTypeList = new ArrayList<>();
         String columnName;
+
+//        for (int i = 0; i < createTableTokens.size(); i++) {
+//            System.out.println("i = "+createTableTokens.get(i));
+//        }
 
         for (int i = 0; i < createTableTokens.size()-1; i++) {
 
@@ -1907,6 +1990,12 @@ public class BeaverBase {
         }
         recordPayloadHeader.add(0, numColumns); //add number of columns to the array list
 
+//        System.out.println("payloadSize = " + payloadSize);
+
+//        /*ensure there is space for payload*/
+//        if (!hasSpace(tableName, payloadLength))
+//            createPage(tableName); /*if not, extend the table*/
+
         /*create a .tbl file to contain table data */
         try {
             /*  Create RandomAccessFile tableFile in read-write mode.
@@ -1928,14 +2017,10 @@ public class BeaverBase {
             tableFile.writeShort((int) pageSize);
 
             /*write placeholder FF FF FF FF for the Right Page*/
-            tableFile.write(0xFF);
-            tableFile.write(0xFF);
-            tableFile.write(0xFF);
-            tableFile.write(0xFF);
+            tableFile.writeInt(-1);
 
             /*Close stream*/
             tableFile.close();
-            //tableFile.writeInt(63); /*Why is this 63?*/
         }
         catch(Exception e) {
             System.out.println(e);
@@ -2001,6 +2086,10 @@ public class BeaverBase {
         catch(Exception e) {
             System.out.println(e);
         }
+
+//        /*ensure there is space for payload*/
+//        if (!hasSpace(tableName, payloadLength))
+//            createPage(tableName); /*if not, extend the table*/
 
         /*update beaverbase_columns*/
         try{
@@ -2863,11 +2952,12 @@ public class BeaverBase {
     }
 
     public static void test2(){
-
+        initializeDataStore();
     }
 
     public static void test3(){
-
+         String insert19  = "insert into table (rowid, name, area, population, counselors, zip, parks, avg_age, founded, holiday) t1 (1, archer, 150.4, null, 7, 75111, 2, 43.21, 687943532123, 1531618670000)";
+         parseInsert(insert19);
     }
 
     /*add one pagelength worth of bytes to a .tbl file*/

@@ -93,25 +93,35 @@ public class BeaverBase {
 
     public static void help() {
         out.println(line("*",80));
+
         out.println("SUPPORTED COMMANDS\n");
         out.println("All commands below are case insensitive\n");
+
         out.println("SHOW TABLES;");
         out.println("\tDisplay the names of all tables.\n");
-        //printCmd("SELECT * FROM <table_name>;");
-        //printDef("Display all records in the table <table_name>.");
+
+        out.println("SELECT * FROM <table_name>;");
+        out.println("\tDisplay all records in the table <table_name>;\n");
+
         out.println("SELECT <column_list> FROM <table_name> [WHERE <condition>];");
         out.println("\tDisplay table records whose optional <condition>");
         out.println("\tis <column_name> = <value>.\n");
+
         out.println("DROP TABLE <table_name>;");
         out.println("\tRemove table data (i.e. all records) and its schema.\n");
+
         out.println("UPDATE TABLE <table_name> SET <column_name> = <value> [WHERE <condition>];");
         out.println("\tModify records data whose optional <condition> is\n");
+
         out.println("VERSION;");
         out.println("\tDisplay the program version.\n");
+
         out.println("HELP;");
         out.println("\tDisplay this help information.\n");
+
         out.println("EXIT;");
         out.println("\tExit the program.\n");
+
         out.println(line("*",80));
     }
 
@@ -1334,7 +1344,7 @@ public class BeaverBase {
 
         /*retrieve table information about columns*/
         ArrayList<String> columnListActual = getTableInformation(tableName, "columnList");
-        ArrayList<String> notNullList = getTableInformation(tableName, "nullList");
+        ArrayList<String> isNullableList = getTableInformation(tableName, "nullList");
         ArrayList<String> dataTypeList = getTableInformation(tableName, "dataTypeList");
 
         /*ensure columns and null properties match*/
@@ -1430,78 +1440,152 @@ public class BeaverBase {
             table.seek(pageStart+2);
             table.writeShort(newStartOfContent);
 
+            int rowid = Integer.parseInt(orderedValueList.get(0));
+
+            /*abortString is a delete command for this inserted*/
+            String abortString = "delete from "+tableName+" where rowid = "+rowid;
+
+            /*add record location to list*/
+            int recordPointerPosition = pageStart+8;
+            table.seek(recordPointerPosition);
+            int recordPointer = table.readShort();
+            while(recordPointer!=0){
+                recordPointerPosition+=2;
+                recordPointer = table.readShort();
+            }
+            table.seek(recordPointerPosition);
+            table.writeShort(newStartOfContent);
+
+            /*seek to the new records location and begin writing*/
             table.seek(newStartOfContent);
             table.writeShort(payloadLength - 6 - columnListActual.size()); //record payload length (not counting record header)
-            table.writeInt(Integer.parseInt(orderedValueList.get(0))); //rowid
+            table.writeInt(rowid); //rowid
             table.writeByte(columnListActual.size()-1);
+
             /*first the serial typecodes*/
             for (int i = 1; i < dataTypeList.size(); i++) {
                 boolean isNull = orderedValueList.get(i).toLowerCase().replace(" ", "").replace(",", "").equals("null");
+                boolean canBeNull = isNullableList.get(i).equals("YES");
                 switch (dataTypeList.get(i)) {
                     case "tinyint":
                         if (isNull) {
-                            table.write(0x0);
+                            if (canBeNull) {
+                                table.write(0x0);
+                            } else {
+                                System.out.println("Cannot write NULL to type TINYINT NOT NULLABLE");
+                                parseDelete(abortString); //delete what's been written so far
+                                return;
+                            }
                         } else {
                             table.write(0x4);
                         }
                         break;
                     case "smallint":
                         if (isNull) {
-                            table.write(0x1);
+                            if (canBeNull) {
+                                table.write(0x1);
+                            } else {
+                                System.out.println("Cannot write NULL to type SMALLINT NOT NULLABLE");
+                                parseDelete(abortString); //delete what's been written so far
+                                return;
+                            }
                         } else {
                             table.write(0x5);
                         }
                         break;
                     case "int":
                         if (isNull) {
-                            table.write(0x2);
+                            if (canBeNull) {
+                                table.write(0x2);
+                            } else {
+                                System.out.println("Cannot write NULL to type INT NOT NULLABLE");
+                                parseDelete(abortString); //delete what's been written so far
+                                return;
+                            }
                         } else {
                             table.write(0x6);
                         }
                         break;
                     case "bigint":
                         if (isNull) {
-                            table.write(0x3);
+                            if (canBeNull) {
+                                table.write(0x3);
+                            } else {
+                                System.out.println("Cannot write NULL to type BIGINT NOT NULLABLE");
+                                parseDelete(abortString); //delete what's been written so far
+                                return;
+                            }
                         } else {
                             table.write(0x7);
                         }
                         break;
                     case "real":
                         if (isNull) {
-                            table.write(0x2);
+                            if (canBeNull) {
+                                table.write(0x2);
+                            } else {
+                                System.out.println("Cannot write NULL to type REAL NOT NULLABLE");
+                                parseDelete(abortString); //delete what's been written so far
+                                return;
+                            }
                         } else {
                             table.write(0x8);
                         }
                         break;
                     case "double":
                         if (isNull) {
-                            table.write(0x3);
+                            if (canBeNull) {
+                                table.write(0x3);
+                            } else {
+                                System.out.println("Cannot write NULL to type DOUBLE NOT NULLABLE");
+                                parseDelete(abortString); //delete what's been written so far
+                                return;
+                            }
                         } else {
                             table.write(0x9);
                         }
                         break;
                     case "datetime":
                         if (isNull) {
-                            table.write(0x3);
+                            if (canBeNull) {
+                                table.write(0x3);
+                            } else {
+                                System.out.println("Cannot write NULL to type DATETIME NOT NULLABLE");
+                                parseDelete(abortString); //delete what's been written so far
+                                return;
+                            }
                         } else {
                             table.write(0xA);
                         }
                         break;
                     case "date":
                         if (isNull) {
-                            table.write(0x3);
+                            if (canBeNull) {
+                                table.write(0x3);
+                            } else {
+                                System.out.println("Cannot write NULL to type DATE NOT NULLABLE");
+                                parseDelete(abortString); //delete what's been written so far
+                                return;
+                            }
                         } else {
                             table.write(0xB);
                         }
                         break;
                     case "text":
-                        table.write(0xC+orderedValueList.get(i).length());
-                        break;
+                        if (isNull){
+                            System.out.println("Cannot write NULL to type TEXT");
+                            parseDelete(abortString); //delete what's been written so far
+                            return;
+                        } else {
+                            table.write(0xC+orderedValueList.get(i).length());
+                            break;
+                        }
                     default:
                         System.out.println("There is an issue with this command \"" + dataTypeList.get(i) + "\"");
                         break;
                 }
             }
+
             /*then the actual values*/
             for (int i = 1; i < dataTypeList.size(); i++) {
                 boolean isNull = orderedValueList.get(i).toLowerCase().replace(" ", "").replace(",", "").equals("null");
@@ -1569,19 +1653,8 @@ public class BeaverBase {
                         System.out.println("There is an issue with this command \"" + dataTypeList.get(i) + "\"");
                         break;
                 }
-            }
 
-            /*add record location to list*/
-            int recordPointerPosition = pageStart+8;
-            table.seek(recordPointerPosition);
-            int recordPointer = table.readShort();
-            while(recordPointer!=0){
-                recordPointerPosition+=2;
-                recordPointer = table.readShort();
             }
-            table.seek(recordPointerPosition);
-            table.writeShort(newStartOfContent);
-
             table.close();
         }
         catch(IOException e) {
@@ -1799,7 +1872,11 @@ public class BeaverBase {
     }
 
     /*create new table*/
-    public static void createTable(String tableName, ArrayList<String> columnList, ArrayList<String> columnDataTypeList, ArrayList<String> isNullableList) {
+    public static void createTable(
+            String tableName,
+            ArrayList<String> columnList,
+            ArrayList<String> columnDataTypeList,
+            ArrayList<String> isNullableList) {
 
         /*if the table name is already in use, break*/
         if(tableExists(tableName)){
@@ -2587,7 +2664,7 @@ public class BeaverBase {
                 + "rowid int primary key, "
                 + "name text not nullable, "
                 + "area double, "
-                + "population bigint, "
+                + "population bigint not nullable, "
                 + "counselors tinyint, "
                 + "zip int, "
                 + "parks smallint, "
@@ -2596,7 +2673,7 @@ public class BeaverBase {
                 + "holiday date"
                 + " )";
 
-        String insert1  = "insert into table (rowid, name, area, population, counselors, zip, parks, avg_age, founded, holiday) t1 (1, archer, 150.4, 8809, 7, 75111, 2, 43.21, 687943532123, 1531618670000)";
+        String insert1  = "insert into table (rowid, name, area, population, counselors, zip, parks, avg_age, founded, holiday) t1 (1, archer, 150.4, null, 7, 75111, 2, 43.21, 687943532123, 1531618670000)";
         String insert2  = "insert into table (rowid, name, area, population, counselors, zip, parks, avg_age, founded, holiday) t1 (2, dallas, 345.6, 2987678, 8, 75112, 299, 41.31, 687943532123, 1531618670000)";
         String insert3  = "insert into table (rowid, name, area, population, counselors, zip, parks, avg_age, founded, holiday) t1 (3, jack, 534.3, 5476, 8, 75113, 23, 36.90, 687943532123, 1531618670000)";
         String insert4  = "insert into table (rowid, name, area, population, counselors, zip, parks, avg_age, founded, holiday) t1 (4, montague, 789.3, 10292, 7, 75114, 13, 38.23, 687943532321, 1531618670000)";
@@ -2619,24 +2696,24 @@ public class BeaverBase {
 
         parseCreateTable(createTexasCounties);
         parseInsert(insert1);
-        parseInsert(insert2);
-        parseInsert(insert3);
-        parseInsert(insert4);
-        parseInsert(insert5);
-        parseInsert(insert6);
-        parseInsert(insert7);
-        parseInsert(insert8);
-        parseInsert(insert9);
-        parseInsert(insert10);
-        parseInsert(insert11);
-        parseInsert(insert12);
-        parseInsert(insert13);
-        parseInsert(insert14);
-        parseInsert(insert15);
-        parseInsert(insert16);
-        parseInsert(insert17);
-        parseInsert(insert18);
-        parseQuery(query);
+//        parseInsert(insert2);
+//        parseInsert(insert3);
+//        parseInsert(insert4);
+//        parseInsert(insert5);
+//        parseInsert(insert6);
+//        parseInsert(insert7);
+//        parseInsert(insert8);
+//        parseInsert(insert9);
+//        parseInsert(insert10);
+//        parseInsert(insert11);
+//        parseInsert(insert12);
+//        parseInsert(insert13);
+//        parseInsert(insert14);
+//        parseInsert(insert15);
+//        parseInsert(insert16);
+//        parseInsert(insert17);
+//        parseInsert(insert18);
+//        parseQuery(query);
 
     }
 

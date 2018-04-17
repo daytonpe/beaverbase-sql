@@ -521,14 +521,14 @@ public class BeaverBase {
                                 foundMatch = checkIntConstraint(actualConstraintValue4, Integer.parseInt(constraintValue), constraintOperator);
                                 break;
                             case "BIGINT":
-                                double actualConstraintValue5 = table.readLong();
+                                long actualConstraintValue5 = table.readLong();
                                 //System.out.println("actualConstraintValue5 = "+actualConstraintValue5);
-                                foundMatch = checkDoubleConstraint(actualConstraintValue5, Double.parseDouble(constraintValue), constraintOperator);
+                                foundMatch = checkLongConstraint(actualConstraintValue5, Long.parseLong(constraintValue), constraintOperator);
                                 break;
                             case "REAL":
-                                int actualConstraintValue6 = table.readInt();
+                                float actualConstraintValue6 = table.readFloat();
                                 //System.out.println("actualConstraintValue6 = "+actualConstraintValue6);
-                                foundMatch = checkIntConstraint(actualConstraintValue6, Integer.parseInt(constraintValue), constraintOperator);
+                                foundMatch = checkFloatConstraint(actualConstraintValue6, Float.parseFloat(constraintValue), constraintOperator);
                                 break;
                             case "DOUBLE":
                                 //System.out.println("pointer: "+table.getFilePointer());
@@ -614,7 +614,7 @@ public class BeaverBase {
                                 table.writeLong(Long.parseLong(changeValue));;
                                 break;
                             case "REAL":
-                                table.writeInt(Integer.parseInt(changeValue));
+                                table.writeFloat(Float.parseFloat(changeValue));
                                 break;
                             case "DOUBLE":
                                 table.writeDouble(Double.parseDouble(changeValue));
@@ -961,6 +961,46 @@ public class BeaverBase {
         }
     }
 
+    /*given two doubles and a constraint type, determine if the constraint is met*/
+    public static boolean checkFloatConstraint(float value, float constraint, String operator){
+        switch (operator){
+            case "=":
+                return value == constraint;
+            case "!=":
+                return value != constraint;
+            case "<=":
+                return value <= constraint;
+            case "<":
+                return value < constraint;
+            case ">=":
+                return value >= constraint;
+            case ">":
+                return value >= constraint;
+            default:
+                throw new Error("Not a valid constraint operator: "+operator);
+        }
+    }
+
+    /*given two longs and a constraint type, determine if the constraint is met*/
+    public static boolean checkLongConstraint(long value, long constraint, String operator){
+        switch (operator){
+            case "=":
+                return value == constraint;
+            case "!=":
+                return value != constraint;
+            case "<=":
+                return value <= constraint;
+            case "<":
+                return value < constraint;
+            case ">=":
+                return value >= constraint;
+            case ">":
+                return value >= constraint;
+            default:
+                throw new Error("Not a valid constraint operator: "+operator);
+        }
+    }
+
     /*print query results from parsed query parameters*/
     public static void printQueryResults(
         String tableName,
@@ -1120,14 +1160,14 @@ public class BeaverBase {
                                 foundMatch = checkIntConstraint(actualConstraintValue4, Integer.parseInt(constraintValue), constraintOperator);
                                 break;
                             case "BIGINT":
-                                double actualConstraintValue5 = table.readLong();
+                                long actualConstraintValue5 = table.readLong();
                                 //System.out.println("actualConstraintValue5 = "+actualConstraintValue5);
                                 foundMatch = checkDoubleConstraint(actualConstraintValue5, Double.parseDouble(constraintValue), constraintOperator);
                                 break;
                             case "REAL":
-                                int actualConstraintValue6 = table.readInt();
+                                float actualConstraintValue6 = table.readFloat();
                                 //System.out.println("actualConstraintValue6 = "+actualConstraintValue6);
-                                foundMatch = checkIntConstraint(actualConstraintValue6, Integer.parseInt(constraintValue), constraintOperator);
+                                foundMatch = checkFloatConstraint(actualConstraintValue6, Float.parseFloat(constraintValue), constraintOperator);
                                 break;
                             case "DOUBLE":
                                 //System.out.println("pointer: "+table.getFilePointer());
@@ -1205,11 +1245,11 @@ public class BeaverBase {
                                         System.out.print(String.format("%-16s" , printValue4));
                                         break;
                                     case "BIGINT":
-                                        double printValue5 = table.readLong();
+                                        long printValue5 = table.readLong();
                                         System.out.print(String.format("%-16s" , printValue5));
                                         break;
                                     case "REAL":
-                                        int printValue6 = table.readInt();
+                                        float printValue6 = table.readFloat();
                                         System.out.print(String.format("%-16s" , printValue6));
                                         break;
                                     case "DOUBLE":
@@ -1299,6 +1339,7 @@ public class BeaverBase {
         /*ensure columns and null properties match*/
         if(columnList.size() != columnListActual.size())
             System.out.println("Incorrect number of columns supplied.");
+
         if(valueList.size() != columnListActual.size())
             System.out.println("Incorrect number of values supplied.");
 
@@ -1440,10 +1481,10 @@ public class BeaverBase {
                         table.writeInt(Integer.parseInt(orderedValueList.get(i)));
                         break;
                     case "BIGINT":
-                        table.writeLong(Integer.parseInt(orderedValueList.get(i)));
+                        table.writeLong(Long.parseLong(orderedValueList.get(i)));
                         break;
                     case "REAL":
-                        table.writeDouble(Double.parseDouble(orderedValueList.get(i)));
+                        table.writeFloat(Float.parseFloat(orderedValueList.get(i)));
                         break;
                     case "DOUBLE":
                         table.writeDouble(Double.parseDouble(orderedValueList.get(i)));
@@ -2409,14 +2450,14 @@ public class BeaverBase {
                                     foundMatch = checkIntConstraint(actualConstraintValue4, Integer.parseInt(constraintValue), constraintOperator);
                                     break;
                                 case "BIGINT":
-                                    double actualConstraintValue5 = table.readLong();
+                                    long actualConstraintValue5 = table.readLong();
                                     //System.out.println("actualConstraintValue5 = "+actualConstraintValue5);
-                                    foundMatch = checkDoubleConstraint(actualConstraintValue5, Double.parseDouble(constraintValue), constraintOperator);
+                                    foundMatch = checkLongConstraint(actualConstraintValue5, Long.parseLong(constraintValue), constraintOperator);
                                     break;
                                 case "REAL":
-                                    int actualConstraintValue6 = table.readInt();
+                                    float actualConstraintValue6 = table.readFloat();
                                     //System.out.println("actualConstraintValue6 = "+actualConstraintValue6);
-                                    foundMatch = checkIntConstraint(actualConstraintValue6, Integer.parseInt(constraintValue), constraintOperator);
+                                    foundMatch = checkFloatConstraint(actualConstraintValue6, Float.parseFloat(constraintValue), constraintOperator);
                                     break;
                                 case "DOUBLE":
                                     //System.out.println("pointer: "+table.getFilePointer());
@@ -2703,26 +2744,34 @@ public class BeaverBase {
     /*reinstall database, create t1 table and insert texas_county data*/
     public static void initialize2(){
         initializeDataStore();
-        String createTexasCounties = "create t1 ( rowid int, name text not nullable, area double, population int, counselors tinyint )";
-        String insert1  = "insert into table (rowid, name, area, population, counselors) t1 (1, archer, 150.4, 8809, 7)";
-        String insert2  = "insert into table (rowid, name, area, population, counselors) t1 (2, dallas, 345.6, 2987678, 8)";
-        String insert3  = "insert into table (rowid, name, area, population, counselors) t1 (3, jack, 534.3, 5476, 8)";
-        String insert4  = "insert into table (rowid, name, area, population, counselors) t1 (4, montague, 789.3, 10292, 7)";
-        String insert5  = "insert into table (rowid, name, area, population, counselors) t1 (5, anderson, 150.4, 9972, 9)";
-        String insert6  = "insert into table (rowid, name, area, population, counselors) t1 (6, bexar, 150.4, 1900000, 6)";
-        String insert7  = "insert into table (rowid, name, area, population, counselors) t1 (7, collin, 345.6, 910000, 7)";
-        String insert8  = "insert into table (rowid, name, area, population, counselors) t1 (8, tarrant, 534.3, 2000000, 4)";
-        String insert9  = "insert into table (rowid, name, area, population, counselors) t1 (9, williamson, 789.3, 510000, 3)";
-        String insert10 = "insert into table (rowid, name, area, population, counselors) t1 (10, travis, 150.4, 1200000, 7)";
-        String insert11 = "insert into table (rowid, name, area, population, counselors) t1 (11, comal, 150.4, 130000, 8)";
-        String insert12 = "insert into table (rowid, name, area, population, counselors) t1 (12, nueces, 345.6, 360000, 3)";
-        String insert13 = "insert into table (rowid, name, area, population, counselors) t1 (13, hudspeth, 534.3, 3400, 7)";
-        String insert14 = "insert into table (rowid, name, area, population, counselors) t1 (14, coryell, 789.3, 76000, 3)";
-        String insert15 = "insert into table (rowid, name, area, population, counselors) t1 (15, hays, 150.4, 190000, 5)";
-        String insert16 = "insert into table (rowid, name, area, population, counselors) t1 (16, glasscock, 150.4, 1300, 7)";
-        String insert17 = "insert into table (rowid, name, area, population, counselors) t1 (17, wilbarger, 150.4, 190000, 4)";
-        String insert18 = "insert into table (rowid, name, area, population, counselors) t1 (18, frio, 150.4, 19000, 7)";
+        String createTexasCounties = "create t1 ( "
+                + "rowid int, "
+                + "name text not nullable, "
+                + "area double, "
+                + "population bigint, "
+                + "counselors tinyint, "
+                + "zip int, "
+                + "parks smallint, "
+                + "avg_age real )";
 
+        String insert1  = "insert into table (rowid, name, area, population, counselors, zip, parks, avg_age) t1 (1, archer, 150.4, 8809, 7, 75111, 2, 43.21)";
+        String insert2  = "insert into table (rowid, name, area, population, counselors, zip, parks, avg_age) t1 (2, dallas, 345.6, 2987678, 8, 75112, 299, 41.31)";
+        String insert3  = "insert into table (rowid, name, area, population, counselors, zip, parks, avg_age) t1 (3, jack, 534.3, 5476, 8, 75113, 23, 36.90)";
+        String insert4  = "insert into table (rowid, name, area, population, counselors, zip, parks, avg_age) t1 (4, montague, 789.3, 10292, 7, 75114, 13, 38.23)";
+        String insert5  = "insert into table (rowid, name, area, population, counselors, zip, parks, avg_age) t1 (5, anderson, 150.4, 9972, 9, 75115, 98, 33.87)";
+        String insert6  = "insert into table (rowid, name, area, population, counselors, zip, parks, avg_age) t1 (6, bexar, 150.4, 1900000, 6, 75116, 4, 34.67)";
+        String insert7  = "insert into table (rowid, name, area, population, counselors, zip, parks, avg_age) t1 (7, collin, 345.6, 910000, 7, 75117, 89, 37.80)";
+        String insert8  = "insert into table (rowid, name, area, population, counselors, zip, parks, avg_age) t1 (8, tarrant, 534.3, 2000000, 4, 75118, 43, 36.09)";
+        String insert9  = "insert into table (rowid, name, area, population, counselors, zip, parks, avg_age) t1 (9, williamson, 789.3, 510000, 3, 75119, 25, 31.95)";
+        String insert10 = "insert into table (rowid, name, area, population, counselors, zip, parks, avg_age) t1 (10, travis, 150.4, 1200000, 7, 75120, 65, 29.17)";
+        String insert11 = "insert into table (rowid, name, area, population, counselors, zip, parks, avg_age) t1 (11, comal, 150.4, 130000, 8, 75121, 2, 28.21)";
+        String insert12 = "insert into table (rowid, name, area, population, counselors, zip, parks, avg_age) t1 (12, nueces, 345.6, 360000, 3, 75122, 20, 40.15)";
+        String insert13 = "insert into table (rowid, name, area, population, counselors, zip, parks, avg_age) t1 (13, hudspeth, 534.3, 3400, 7, 75123, 10, 44.99)";
+        String insert14 = "insert into table (rowid, name, area, population, counselors, zip, parks, avg_age) t1 (14, coryell, 789.3, 76000, 3, 75124, 17, 50.00)";
+        String insert15 = "insert into table (rowid, name, area, population, counselors, zip, parks, avg_age) t1 (15, hays, 150.4, 190000, 5, 75125, 13, 43.12)";
+        String insert16 = "insert into table (rowid, name, area, population, counselors, zip, parks, avg_age) t1 (16, glasscock, 150.4, 1300, 7, 75125, 87, 27.54)";
+        String insert17 = "insert into table (rowid, name, area, population, counselors, zip, parks, avg_age) t1 (17, wilbarger, 150.4, 190000, 4, 75126, 7, 29.21)";
+        String insert18 = "insert into table (rowid, name, area, population, counselors, zip, parks, avg_age) t1 (18, frio, 150.4, 19000, 7, 75127, 6, 33.12)";
 
         String query = "select * from t1";
 

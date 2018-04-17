@@ -17,6 +17,8 @@ import java.util.Arrays;
 import static java.lang.System.out;
 import java.math.BigInteger;
 import java.nio.ByteBuffer;
+import java.text.DateFormat;
+import java.text.SimpleDateFormat;
 
 public class BeaverBase {
 
@@ -25,6 +27,8 @@ public class BeaverBase {
     static String copyright = "©2018 Pat Dayton";
     static boolean isExit = false;
     static int pageSize = 512;
+    static DateFormat datetimeFormat = new SimpleDateFormat("yyyy-MM-dd_HH:mm:ss  ");
+    static DateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd");
 
     /*
      *  The Scanner class is used to collect user commands from the prompt
@@ -538,14 +542,14 @@ public class BeaverBase {
                                 foundMatch = checkDoubleConstraint(actualConstraintValue7, Double.parseDouble(constraintValue), constraintOperator);
                                 break;
                             case "DATETIME":
-                                double actualConstraintValue8 = table.readLong();
+                                long actualConstraintValue8 = table.readLong();
                                 //System.out.println("actualConstraintValue8 = "+actualConstraintValue8);
-                                foundMatch = checkDoubleConstraint(actualConstraintValue8, Double.parseDouble(constraintValue), constraintOperator);
+                                foundMatch = checkLongConstraint(actualConstraintValue8, Long.parseLong(constraintValue), constraintOperator);
                                 break;
                             case "DATE":
-                                double actualConstraintValue9 = table.readLong();
+                                long actualConstraintValue9 = table.readLong();
                                 //System.out.println("actualConstraintValue9 = "+actualConstraintValue9);
-                                foundMatch = checkDoubleConstraint(actualConstraintValue9, Double.parseDouble(constraintValue), constraintOperator);
+                                foundMatch = checkLongConstraint(actualConstraintValue9, Long.parseLong(constraintValue), constraintOperator);
                                 break;
                             default:
                                 throw new Error("Not a valid data type: "+recordConstraintType);
@@ -1022,7 +1026,7 @@ public class BeaverBase {
         }
         System.out.println("");
         columnList.forEach((_item) -> {
-            System.out.print("----------------");
+            System.out.print("-----------------");
         });
         System.out.println("");
 
@@ -1177,14 +1181,14 @@ public class BeaverBase {
                                 foundMatch = checkDoubleConstraint(actualConstraintValue7, Double.parseDouble(constraintValue), constraintOperator);
                                 break;
                             case "DATETIME":
-                                double actualConstraintValue8 = table.readLong();
+                                long actualConstraintValue8 = table.readLong();
                                 //System.out.println("actualConstraintValue8 = "+actualConstraintValue8);
-                                foundMatch = checkDoubleConstraint(actualConstraintValue8, Double.parseDouble(constraintValue), constraintOperator);
+                                foundMatch = checkLongConstraint(actualConstraintValue8, Long.parseLong(constraintValue), constraintOperator);
                                 break;
                             case "DATE":
-                                double actualConstraintValue9 = table.readLong();
+                                long actualConstraintValue9 = table.readLong();
                                 //System.out.println("actualConstraintValue9 = "+actualConstraintValue9);
-                                foundMatch = checkDoubleConstraint(actualConstraintValue9, Double.parseDouble(constraintValue), constraintOperator);
+                                foundMatch = checkLongConstraint(actualConstraintValue9, Long.parseLong(constraintValue), constraintOperator);
                                 break;
                             default:
                                 throw new Error("Not a valid data type: "+recordConstraintType);
@@ -1212,8 +1216,6 @@ public class BeaverBase {
                         /*first where the data types are stored in single byte format*/
                         int dataTypesPointer = recordLocation+7;
                         /*second where the record payload actually starts*/
-                        //System.out.println("recordLocation = " + recordLocation);
-                        //System.out.println("numColumns = " + numColumns);
                         int recordPayloadPointer = recordLocation+7+numColumns;
 
 
@@ -1228,9 +1230,6 @@ public class BeaverBase {
                             if (booleanPrintList.get(j)) {
                                 /*print it based on what type it is*/
                                 table.seek(recordPayloadPointer);
-                                //System.out.println("recordPayloadPointer = " + recordPayloadPointer);
-                                //System.out.println("dataType = " + dataType);
-                                //System.out.println("convertTypeCode(dataType) = " + convertTypeCode(dataType));
                                 switch (convertTypeCode(dataType)) {
                                     case "TINYINT":
                                         int printValue2 = table.readByte();
@@ -1257,12 +1256,13 @@ public class BeaverBase {
                                         System.out.print(String.format("%-16s" , printValue7));
                                         break;
                                     case "DATETIME":
-                                        double printValue8 = table.readLong();
-                                        System.out.print(String.format("%-16s" , printValue8));
+                                        long printValue8 = table.readLong();
+                                        System.out.print(String.format("%-16s" , datetimeFormat.format(printValue8)));
                                         break;
                                     case "DATE":
-                                        double printValue9 = table.readLong();
-                                        System.out.print(String.format("%-16s" , printValue9));
+                                        long printValue9 = table.readLong();
+                                        /*note that we are still storing the time part of the DATE value, just not displaying it*/
+                                        System.out.print(String.format("%-16s" , dateFormat.format(printValue9)));
                                         break;
                                     case "TEXT":
                                         byte[] temp = new byte[dataType-0xC];
@@ -1490,10 +1490,10 @@ public class BeaverBase {
                         table.writeDouble(Double.parseDouble(orderedValueList.get(i)));
                         break;
                     case "DATETIME":
-                        table.writeInt(Integer.parseInt(orderedValueList.get(i)));
+                        table.writeLong(Long.parseLong(orderedValueList.get(i)));
                         break;
                     case "DATE":
-                        table.writeInt(Integer.parseInt(orderedValueList.get(i)));
+                        table.writeLong(Long.parseLong(orderedValueList.get(i)));
                         break;
                     case "TEXT":
                         table.write(orderedValueList.get(i).getBytes());
@@ -2467,14 +2467,14 @@ public class BeaverBase {
                                     foundMatch = checkDoubleConstraint(actualConstraintValue7, Double.parseDouble(constraintValue), constraintOperator);
                                     break;
                                 case "DATETIME":
-                                    double actualConstraintValue8 = table.readLong();
+                                    long actualConstraintValue8 = table.readLong();
                                     //System.out.println("actualConstraintValue8 = "+actualConstraintValue8);
-                                    foundMatch = checkDoubleConstraint(actualConstraintValue8, Double.parseDouble(constraintValue), constraintOperator);
+                                    foundMatch = checkLongConstraint(actualConstraintValue8, Long.parseLong(constraintValue), constraintOperator);
                                     break;
                                 case "DATE":
-                                    double actualConstraintValue9 = table.readLong();
+                                    long actualConstraintValue9 = table.readLong();
                                     //System.out.println("actualConstraintValue9 = "+actualConstraintValue9);
-                                    foundMatch = checkDoubleConstraint(actualConstraintValue9, Double.parseDouble(constraintValue), constraintOperator);
+                                    foundMatch = checkLongConstraint(actualConstraintValue9, Long.parseLong(constraintValue), constraintOperator);
                                     break;
                                 default:
                                     throw new Error("Not a valid data type: "+recordConstraintType);
@@ -2752,26 +2752,29 @@ public class BeaverBase {
                 + "counselors tinyint, "
                 + "zip int, "
                 + "parks smallint, "
-                + "avg_age real )";
+                + "avg_age real, "
+                + "founded datetime, "
+                + "holiday date"
+                + " )";
 
-        String insert1  = "insert into table (rowid, name, area, population, counselors, zip, parks, avg_age) t1 (1, archer, 150.4, 8809, 7, 75111, 2, 43.21)";
-        String insert2  = "insert into table (rowid, name, area, population, counselors, zip, parks, avg_age) t1 (2, dallas, 345.6, 2987678, 8, 75112, 299, 41.31)";
-        String insert3  = "insert into table (rowid, name, area, population, counselors, zip, parks, avg_age) t1 (3, jack, 534.3, 5476, 8, 75113, 23, 36.90)";
-        String insert4  = "insert into table (rowid, name, area, population, counselors, zip, parks, avg_age) t1 (4, montague, 789.3, 10292, 7, 75114, 13, 38.23)";
-        String insert5  = "insert into table (rowid, name, area, population, counselors, zip, parks, avg_age) t1 (5, anderson, 150.4, 9972, 9, 75115, 98, 33.87)";
-        String insert6  = "insert into table (rowid, name, area, population, counselors, zip, parks, avg_age) t1 (6, bexar, 150.4, 1900000, 6, 75116, 4, 34.67)";
-        String insert7  = "insert into table (rowid, name, area, population, counselors, zip, parks, avg_age) t1 (7, collin, 345.6, 910000, 7, 75117, 89, 37.80)";
-        String insert8  = "insert into table (rowid, name, area, population, counselors, zip, parks, avg_age) t1 (8, tarrant, 534.3, 2000000, 4, 75118, 43, 36.09)";
-        String insert9  = "insert into table (rowid, name, area, population, counselors, zip, parks, avg_age) t1 (9, williamson, 789.3, 510000, 3, 75119, 25, 31.95)";
-        String insert10 = "insert into table (rowid, name, area, population, counselors, zip, parks, avg_age) t1 (10, travis, 150.4, 1200000, 7, 75120, 65, 29.17)";
-        String insert11 = "insert into table (rowid, name, area, population, counselors, zip, parks, avg_age) t1 (11, comal, 150.4, 130000, 8, 75121, 2, 28.21)";
-        String insert12 = "insert into table (rowid, name, area, population, counselors, zip, parks, avg_age) t1 (12, nueces, 345.6, 360000, 3, 75122, 20, 40.15)";
-        String insert13 = "insert into table (rowid, name, area, population, counselors, zip, parks, avg_age) t1 (13, hudspeth, 534.3, 3400, 7, 75123, 10, 44.99)";
-        String insert14 = "insert into table (rowid, name, area, population, counselors, zip, parks, avg_age) t1 (14, coryell, 789.3, 76000, 3, 75124, 17, 50.00)";
-        String insert15 = "insert into table (rowid, name, area, population, counselors, zip, parks, avg_age) t1 (15, hays, 150.4, 190000, 5, 75125, 13, 43.12)";
-        String insert16 = "insert into table (rowid, name, area, population, counselors, zip, parks, avg_age) t1 (16, glasscock, 150.4, 1300, 7, 75125, 87, 27.54)";
-        String insert17 = "insert into table (rowid, name, area, population, counselors, zip, parks, avg_age) t1 (17, wilbarger, 150.4, 190000, 4, 75126, 7, 29.21)";
-        String insert18 = "insert into table (rowid, name, area, population, counselors, zip, parks, avg_age) t1 (18, frio, 150.4, 19000, 7, 75127, 6, 33.12)";
+        String insert1  = "insert into table (rowid, name, area, population, counselors, zip, parks, avg_age, founded, holiday) t1 (1, archer, 150.4, 8809, 7, 75111, 2, 43.21, 687943532123, 1531618670000)";
+        String insert2  = "insert into table (rowid, name, area, population, counselors, zip, parks, avg_age, founded, holiday) t1 (2, dallas, 345.6, 2987678, 8, 75112, 299, 41.31, 687943532123, 1531618670000)";
+        String insert3  = "insert into table (rowid, name, area, population, counselors, zip, parks, avg_age, founded, holiday) t1 (3, jack, 534.3, 5476, 8, 75113, 23, 36.90, 687943532123, 1531618670000)";
+        String insert4  = "insert into table (rowid, name, area, population, counselors, zip, parks, avg_age, founded, holiday) t1 (4, montague, 789.3, 10292, 7, 75114, 13, 38.23, 687943532321, 1531618670000)";
+        String insert5  = "insert into table (rowid, name, area, population, counselors, zip, parks, avg_age, founded, holiday) t1 (5, anderson, 150.4, 9972, 9, 75115, 98, 33.87, 687943533212, 1531618670000)";
+        String insert6  = "insert into table (rowid, name, area, population, counselors, zip, parks, avg_age, founded, holiday) t1 (6, bexar, 150.4, 1900000, 6, 75116, 4, 34.67, 687943531232, 1531618670000)";
+        String insert7  = "insert into table (rowid, name, area, population, counselors, zip, parks, avg_age, founded, holiday) t1 (7, collin, 345.6, 910000, 7, 75117, 89, 37.80, 687943532312, 1531618670000)";
+        String insert8  = "insert into table (rowid, name, area, population, counselors, zip, parks, avg_age, founded, holiday) t1 (8, tarrant, 534.3, 2000000, 4, 75118, 43, 36.09, 687943532123, 1531618670000)";
+        String insert9  = "insert into table (rowid, name, area, population, counselors, zip, parks, avg_age, founded, holiday) t1 (9, williamson, 789.3, 510000, 3, 75119, 25, 31.95, 687943532321, 1531618670000)";
+        String insert10 = "insert into table (rowid, name, area, population, counselors, zip, parks, avg_age, founded, holiday) t1 (10, travis, 150.4, 1200000, 7, 75120, 65, 29.17, 687943532123, 1531618670000)";
+        String insert11 = "insert into table (rowid, name, area, population, counselors, zip, parks, avg_age, founded, holiday) t1 (11, comal, 150.4, 130000, 8, 75121, 2, 28.21, 687943532234, 1531618670000)";
+        String insert12 = "insert into table (rowid, name, area, population, counselors, zip, parks, avg_age, founded, holiday) t1 (12, nueces, 345.6, 360000, 3, 75122, 20, 40.15, 687943532342, 1531618670000)";
+        String insert13 = "insert into table (rowid, name, area, population, counselors, zip, parks, avg_age, founded, holiday) t1 (13, hudspeth, 534.3, 3400, 7, 75123, 10, 44.99, 687943532345, 1531618670000)";
+        String insert14 = "insert into table (rowid, name, area, population, counselors, zip, parks, avg_age, founded, holiday) t1 (14, coryell, 789.3, 76000, 3, 75124, 17, 50.00, 687943536452, 1531618670000)";
+        String insert15 = "insert into table (rowid, name, area, population, counselors, zip, parks, avg_age, founded, holiday) t1 (15, hays, 150.4, 190000, 5, 75125, 13, 43.12, 687943534562, 1531618670000)";
+        String insert16 = "insert into table (rowid, name, area, population, counselors, zip, parks, avg_age, founded, holiday) t1 (16, glasscock, 150.4, 1300, 7, 75125, 87, 27.54, 687943535672, 1531618670000)";
+        String insert17 = "insert into table (rowid, name, area, population, counselors, zip, parks, avg_age, founded, holiday) t1 (17, wilbarger, 150.4, 190000, 4, 75126, 7, 29.21, 687943538762, 1531618670000)";
+        String insert18 = "insert into table (rowid, name, area, population, counselors, zip, parks, avg_age, founded, holiday) t1 (18, frio, 150.4, 19000, 7, 75127, 6, 33.12, 687943539082, 1531618670000)";
 
         String query = "select * from t1";
 

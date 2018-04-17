@@ -431,7 +431,6 @@ public class BeaverBase {
 
                 /*linear search records for those that match our query*/
                 do{
-
                     /*get location of next title*/
                     table.seek(recordPointer);
                     int recordLocation = table.readShort();
@@ -948,7 +947,7 @@ public class BeaverBase {
             case ">=":
                 return value >= constraint;
             case ">":
-                return value >= constraint;
+                return value > constraint;
             default:
                 throw new Error("Not a valid constraint operator: "+operator);
         }
@@ -968,7 +967,7 @@ public class BeaverBase {
             case ">=":
                 return value >= constraint;
             case ">":
-                return value >= constraint;
+                return value > constraint;
             default:
                 throw new Error("Not a valid constraint operator: "+operator);
         }
@@ -988,7 +987,7 @@ public class BeaverBase {
             case ">=":
                 return value >= constraint;
             case ">":
-                return value >= constraint;
+                return value > constraint;
             default:
                 throw new Error("Not a valid constraint operator: "+operator);
         }
@@ -1008,7 +1007,7 @@ public class BeaverBase {
             case ">=":
                 return value >= constraint;
             case ">":
-                return value >= constraint;
+                return value > constraint;
             default:
                 throw new Error("Not a valid constraint operator: "+operator);
         }

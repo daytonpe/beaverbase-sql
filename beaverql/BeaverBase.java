@@ -1764,9 +1764,9 @@ public class BeaverBase {
 
             /*isNullable List*/
             if (temp.contains("not nullable")){
-                isNullableList.add("YES");
-            } else {
                 isNullableList.add("NO");
+            } else {
+                isNullableList.add("YES");
             }
 
             /*columnList*/
@@ -1774,6 +1774,11 @@ public class BeaverBase {
 
             /*columnDataTypeList*/
             columnDataTypeList.add(tempArr.get(1));
+        }
+
+        if (!isNullableList.contains("NO")) {
+            System.out.println("\nNew tables must have one NOT NULLABLE attribute (Cannot be rowid).");
+            return;
         }
 
         createTable(

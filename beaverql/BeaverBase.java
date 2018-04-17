@@ -1740,14 +1740,13 @@ public class BeaverBase {
 
     /*parse out info from create table command*/
     public static void parseCreateTable(String createTableString) {
+        /*initial parsing*/
         ArrayList<String> columnList = new ArrayList<>();
         ArrayList<String> columnDataTypeList = new ArrayList<>();
         ArrayList<String> isNullableList = new ArrayList<>();
-
         ArrayList<String> split1 = new ArrayList<>(Arrays.asList(createTableString.split("\\(")));
         ArrayList <String> split2 = new ArrayList<>(Arrays.asList(split1.get(0).split(" ")));
         String tableName = split2.get(1).replace(",", "").replace(" ", "");
-
         ArrayList <String> split3 = new ArrayList<>(Arrays.asList(split1.get(1).split(", ")));
 
         /*if the first attribute isn't rowid and/or doesn't say PRIMARY KEY, throw*/
@@ -1760,6 +1759,16 @@ public class BeaverBase {
         /*fill our lists with data about the table*/
         for (int i = 0; i < split3.size(); i++) {
             String temp = split3.get(i).replace(")", "").trim().toLowerCase();
+
+            /*make sure no other keys are listed as primary key*/
+            if (i != 0) {
+               if (temp.contains("primary key") || temp.contains("rowid")){
+                System.out.println("\nOnly rowid can be specified primary key.");
+                return;
+                }
+            }
+
+
             ArrayList<String> tempArr = new ArrayList<>(Arrays.asList(temp.split(" ")));
 
             /*isNullable List*/
@@ -1787,7 +1796,6 @@ public class BeaverBase {
             columnDataTypeList,
             isNullableList
         );
-
     }
 
     /*create new table*/

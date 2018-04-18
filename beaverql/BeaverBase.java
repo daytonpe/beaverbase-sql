@@ -197,17 +197,11 @@ public class BeaverBase {
             case "delete":
                 parseDelete(userCommand);
                 break;
-            case "init":
-                initialize();
+            case "txinit":
+                txInit();
                 break;
-            case "test1":
-                test1();
-                break;
-            case "test2":
-                test2();
-                break;
-            case "test3":
-                test3();
+            case "wainit":
+                waInit();
                 break;
             case "exit":
                 isExit = true;
@@ -461,7 +455,7 @@ public class BeaverBase {
 
         /*if "primary key" is not present at all, throw*/
         if (!primKey.contains("primary key") || !primKey.contains("rowid")){
-            System.out.println("\nrowid must be specified primary key.");
+            System.out.println("\nrowid must be specified primary key.\n");
             return;
         }
 
@@ -484,7 +478,7 @@ public class BeaverBase {
             ArrayList<String> tempArr = new ArrayList<>(Arrays.asList(temp.split(" ")));
 
             /*isNullable List*/
-            if (temp.contains("not nullable")){
+            if (temp.contains("not null")){
                 isNullableList.add("NO");
             } else {
                 isNullableList.add("YES");
@@ -498,7 +492,7 @@ public class BeaverBase {
         }
 
         if (!isNullableList.contains("NO")) {
-            System.out.println("\nNew tables must have one NOT NULLABLE attribute (Cannot be rowid).\n");
+            System.out.println("\nNew tables must have one NOT NULL attribute (Cannot be rowid).\n");
             return;
         }
 
@@ -552,12 +546,14 @@ public class BeaverBase {
         ArrayList<String> dataTypeList = getTableInformation(tableName, "dataTypeList");
 
         /*ensure columns and null properties match*/
-        if(columnList.size() != columnListActual.size())
+        if(columnList.size() != columnListActual.size()){
             System.out.println("Incorrect number of columns supplied.");
-
-        if(valueList.size() != columnListActual.size())
+            return;
+        }
+        if(valueList.size() != columnListActual.size()){
             System.out.println("Incorrect number of values supplied.");
-
+            return;
+        }
         /*reorder columnList and valueList to match ordinal positions*/
         ArrayList<String> orderedValueList = new ArrayList<>();
         for (int i = 0; i < columnListActual.size(); i++) {
@@ -909,7 +905,7 @@ public class BeaverBase {
                             if (canBeNull) {
                                 table.write(0x0);
                             } else {
-                                System.out.println("Cannot write NULL to type TINYINT NOT NULLABLE");
+                                System.out.println("Cannot write NULL to type TINYINT NOT NULL");
                                 parseDelete(abortString); //delete what's been written so far
                                 return;
                             }
@@ -922,7 +918,7 @@ public class BeaverBase {
                             if (canBeNull) {
                                 table.write(0x1);
                             } else {
-                                System.out.println("Cannot write NULL to type SMALLINT NOT NULLABLE");
+                                System.out.println("Cannot write NULL to type SMALLINT NOT NULL");
                                 parseDelete(abortString); //delete what's been written so far
                                 return;
                             }
@@ -935,7 +931,7 @@ public class BeaverBase {
                             if (canBeNull) {
                                 table.write(0x2);
                             } else {
-                                System.out.println("Cannot write NULL to type INT NOT NULLABLE");
+                                System.out.println("Cannot write NULL to type INT NOT NULL");
                                 parseDelete(abortString); //delete what's been written so far
                                 return;
                             }
@@ -948,7 +944,7 @@ public class BeaverBase {
                             if (canBeNull) {
                                 table.write(0x3);
                             } else {
-                                System.out.println("Cannot write NULL to type BIGINT NOT NULLABLE");
+                                System.out.println("Cannot write NULL to type BIGINT NOT NULL");
                                 parseDelete(abortString); //delete what's been written so far
                                 return;
                             }
@@ -961,7 +957,7 @@ public class BeaverBase {
                             if (canBeNull) {
                                 table.write(0x2);
                             } else {
-                                System.out.println("Cannot write NULL to type REAL NOT NULLABLE");
+                                System.out.println("Cannot write NULL to type REAL NOT NULL");
                                 parseDelete(abortString); //delete what's been written so far
                                 return;
                             }
@@ -974,7 +970,7 @@ public class BeaverBase {
                             if (canBeNull) {
                                 table.write(0x3);
                             } else {
-                                System.out.println("Cannot write NULL to type DOUBLE NOT NULLABLE");
+                                System.out.println("Cannot write NULL to type DOUBLE NOT NULL");
                                 parseDelete(abortString); //delete what's been written so far
                                 return;
                             }
@@ -987,7 +983,7 @@ public class BeaverBase {
                             if (canBeNull) {
                                 table.write(0x3);
                             } else {
-                                System.out.println("Cannot write NULL to type DATETIME NOT NULLABLE");
+                                System.out.println("Cannot write NULL to type DATETIME NOT NULL");
                                 parseDelete(abortString); //delete what's been written so far
                                 return;
                             }
@@ -1000,7 +996,7 @@ public class BeaverBase {
                             if (canBeNull) {
                                 table.write(0x3);
                             } else {
-                                System.out.println("Cannot write NULL to type DATE NOT NULLABLE");
+                                System.out.println("Cannot write NULL to type DATE NOT NULL");
                                 parseDelete(abortString); //delete what's been written so far
                                 return;
                             }
@@ -2828,13 +2824,12 @@ public class BeaverBase {
 
     /* ############ TEST FUNCTIONS ############ */
 
-    /*reinstall database, create t1 table and insert texas_county data*/
-    public static void initialize(){
-        initializeDataStore();
-        String createTexasCounties = "create table t1 ( "
+    /* create tx_counties table and insert Texas county data*/
+    public static void txInit(){
+        String createTexasCounties = "create table tx_counties ( "
                 + "rowid int primary key, "
                 + "name text, "
-                + "area double not nullable, "
+                + "area double not null, "
                 + "population bigint, "
                 + "counselors tinyint, "
                 + "zip int, "
@@ -2844,26 +2839,26 @@ public class BeaverBase {
                 + "holiday date"
                 + " )";
 
-        String insert1  = "insert into t1 (rowid, name, area, population, counselors, zip, parks, avg_age, founded, holiday) values (1, archer, 150.4, null, 7, 75111, 2, 43.21, 687943532123, 1531618670000)";
-        String insert2  = "insert into t1 (rowid, name, area, population, counselors, zip, parks, avg_age, founded, holiday) values (2, dallas, 345.6, 2987678, 8, 75112, 299, 41.31, 687943532123, 1531618670000)";
-        String insert3  = "insert into t1 (rowid, name, area, population, counselors, zip, parks, avg_age, founded, holiday) values (3, jack, 534.3, 5476, 8, 75113, 23, 36.90, 687943532123, 1531618670000)";
-        String insert4  = "insert into t1 (rowid, name, area, population, counselors, zip, parks, avg_age, founded, holiday) values (4, montague, 789.3, 10292, 7, 75114, 13, 38.23, 687943532321, 1531618670000)";
-        String insert5  = "insert into t1 (rowid, name, area, population, counselors, zip, parks, avg_age, founded, holiday) values (5, anderson, 150.4, 9972, 9, 75115, 98, 33.87, 687943533212, 1531618670000)";
-        String insert6  = "insert into t1 (rowid, name, area, population, counselors, zip, parks, avg_age, founded, holiday) values (6, bexar, 150.4, 1900000, 6, 75116, 4, 34.67, 687943531232, 1531618670000)";
-        String insert7  = "insert into t1 (rowid, name, area, population, counselors, zip, parks, avg_age, founded, holiday) values (7, collin, 345.6, 910000, 7, 75117, 89, 37.80, 687943532312, 1531618670000)";
-        String insert8  = "insert into t1 (rowid, name, area, population, counselors, zip, parks, avg_age, founded, holiday) values (8, tarrant, 534.3, 2000000, 4, 75118, 43, 36.09, 687943532123, 1531618670000)";
-        String insert9  = "insert into t1 (rowid, name, area, population, counselors, zip, parks, avg_age, founded, holiday) values (9, williamson, 789.3, 510000, 3, 75119, 25, 31.95, 687943532321, 1531618670000)";
-        String insert10 = "insert into t1 (rowid, name, area, population, counselors, zip, parks, avg_age, founded, holiday) values (10, travis, 150.4, 1200000, 7, 75120, 65, 29.17, 687943532123, 1531618670000)";
-        String insert11 = "insert into t1 (rowid, name, area, population, counselors, zip, parks, avg_age, founded, holiday) values (11, comal, 150.4, 130000, 8, 75121, 2, 28.21, 687943532234, 1531618670000)";
-        String insert12 = "insert into t1 (rowid, name, area, population, counselors, zip, parks, avg_age, founded, holiday) values (12, nueces, 345.6, 360000, 3, 75122, 20, 40.15, 687943532342, 1531618670000)";
-        String insert13 = "insert into t1 (rowid, name, area, population, counselors, zip, parks, avg_age, founded, holiday) values (13, hudspeth, 534.3, 3400, 7, 75123, 10, 44.99, 687943532345, 1531618670000)";
-        String insert14 = "insert into t1 (rowid, name, area, population, counselors, zip, parks, avg_age, founded, holiday) values (14, coryell, 789.3, 76000, 3, 75124, 17, 50.00, 687943536452, 1531618670000)";
-        String insert15 = "insert into t1 (rowid, name, area, population, counselors, zip, parks, avg_age, founded, holiday) values (15, hays, 150.4, 190000, 5, 75125, 13, 43.12, 687943534562, 1531618670000)";
-        String insert16 = "insert into t1 (rowid, name, area, population, counselors, zip, parks, avg_age, founded, holiday) values (16, glasscock, 150.4, 1300, 7, 75125, 87, 27.54, 687943535672, 1531618670000)";
-        String insert17 = "insert into t1 (rowid, name, area, population, counselors, zip, parks, avg_age, founded, holiday) values (17, wilbarger, 150.4, 190000, 4, 75126, 7, 29.21, 687943538762, 1531618670000)";
-        String insert18 = "insert into t1 (rowid, name, area, population, counselors, zip, parks, avg_age, founded, holiday) values (18, frio, 150.4, 19000, 7, 75127, 6, 33.12, 687943539082, 1531618670000)";
+        String insert1  = "insert into tx_counties (rowid, name, area, population, counselors, zip, parks, avg_age, founded, holiday) values (1, archer, 150.4, 5000, 7, 75111, 2, 43.21, 687943532123, 1531618670000)";
+        String insert2  = "insert into tx_counties (rowid, name, area, population, counselors, zip, parks, avg_age, founded, holiday) values (2, dallas, 345.6, 2987678, 8, 75112, 299, 41.31, 687943532123, 1531618670000)";
+        String insert3  = "insert into tx_counties (rowid, name, area, population, counselors, zip, parks, avg_age, founded, holiday) values (3, jack, 534.3, 5476, 8, 75113, 23, 36.90, 687943532123, 1531618670000)";
+        String insert4  = "insert into tx_counties (rowid, name, area, population, counselors, zip, parks, avg_age, founded, holiday) values (4, montague, 789.3, 10292, 7, 75114, 13, 38.23, 687943532321, 1531618670000)";
+        String insert5  = "insert into tx_counties (rowid, name, area, population, counselors, zip, parks, avg_age, founded, holiday) values (5, anderson, 150.4, 9972, 9, 75115, 98, 33.87, 687943533212, 1531618670000)";
+        String insert6  = "insert into tx_counties (rowid, name, area, population, counselors, zip, parks, avg_age, founded, holiday) values (6, bexar, 150.4, 1900000, 6, 75116, 4, 34.67, 687943531232, 1531618670000)";
+        String insert7  = "insert into tx_counties (rowid, name, area, population, counselors, zip, parks, avg_age, founded, holiday) values (7, collin, 345.6, 910000, 7, 75117, 89, 37.80, 687943532312, 1531618670000)";
+        String insert8  = "insert into tx_counties (rowid, name, area, population, counselors, zip, parks, avg_age, founded, holiday) values (8, tarrant, 534.3, 2000000, 4, 75118, 43, 36.09, 687943532123, 1531618670000)";
+        String insert9  = "insert into tx_counties (rowid, name, area, population, counselors, zip, parks, avg_age, founded, holiday) values (9, williamson, 789.3, 510000, 3, 75119, 25, 31.95, 687943532321, 1531618670000)";
+        String insert10 = "insert into tx_counties (rowid, name, area, population, counselors, zip, parks, avg_age, founded, holiday) values (10, travis, 150.4, 1200000, 7, 75120, 65, 29.17, 687943532123, 1531618670000)";
+        String insert11 = "insert into tx_counties (rowid, name, area, population, counselors, zip, parks, avg_age, founded, holiday) values (11, comal, 150.4, 130000, 8, 75121, 2, 28.21, 687943532234, 1531618670000)";
+        String insert12 = "insert into tx_counties (rowid, name, area, population, counselors, zip, parks, avg_age, founded, holiday) values (12, nueces, 345.6, 360000, 3, 75122, 20, 40.15, 687943532342, 1531618670000)";
+        String insert13 = "insert into tx_counties (rowid, name, area, population, counselors, zip, parks, avg_age, founded, holiday) values (13, hudspeth, 534.3, 3400, 7, 75123, 10, 44.99, 687943532345, 1531618670000)";
+        String insert14 = "insert into tx_counties (rowid, name, area, population, counselors, zip, parks, avg_age, founded, holiday) values (14, coryell, 789.3, 76000, 3, 75124, 17, 50.00, 687943536452, 1531618670000)";
+        String insert15 = "insert into tx_counties (rowid, name, area, population, counselors, zip, parks, avg_age, founded, holiday) values (15, hays, 150.4, 190000, 5, 75125, 13, 43.12, 687943534562, 1531618670000)";
+        String insert16 = "insert into tx_counties (rowid, name, area, population, counselors, zip, parks, avg_age, founded, holiday) values (16, glasscock, 150.4, 1300, 7, 75125, 87, 27.54, 687943535672, 1531618670000)";
+        String insert17 = "insert into tx_counties (rowid, name, area, population, counselors, zip, parks, avg_age, founded, holiday) values (17, wilbarger, 150.4, 190000, 4, 75126, 7, 29.21, 687943538762, 1531618670000)";
+        String insert18 = "insert into tx_counties (rowid, name, area, population, counselors, zip, parks, avg_age, founded, holiday) values (18, frio, 150.4, 19000, 7, 75127, 6, 33.12, 687943539082, 1531618670000)";
 
-        String query = "select * from t1";
+        String query = "select * from tx_counties";
 
         parseCreateTable(createTexasCounties);
         parseInsert(insert1);
@@ -2889,12 +2884,12 @@ public class BeaverBase {
 
     }
 
-    public static void test1(){
-        initializeDataStore();
-        String createTexasCounties = "create table t2 ( "
+    /* create wa_counties table and insert Washington county data*/
+    public static void waInit(){
+        String createTexasCounties = "create table wa_counties ( "
                 + "rowid int primary key, "
                 + "name text, "
-                + "area double not nullable, "
+                + "area double not null, "
                 + "population bigint, "
                 + "counselors tinyint, "
                 + "zip int, "
@@ -2904,26 +2899,26 @@ public class BeaverBase {
                 + "holiday date"
                 + " )";
 
-        String insert1  = "insert into t2 (rowid, name, area, population, counselors, zip, parks, avg_age, founded, holiday) values (1, whatcom, 150.4, 21000, 7, 95211, 2, 43.21, 687943532123, 1531618670000)";
-        String insert2  = "insert into t2 (rowid, name, area, population, counselors, zip, parks, avg_age, founded, holiday) values (2, king, 345.6, 2987678, 8, 95212, null, 41.31, 687943532123, 1531618670000)";
-        String insert3  = "insert into t2 (rowid, name, area, population, counselors, zip, parks, avg_age, founded, holiday) values (3, pierce, 534.3, 5476, 8, 95213, 23, 36.90, 687943532123, 1531618670000)";
-        String insert4  = "insert into t2 (rowid, name, area, population, counselors, zip, parks, avg_age, founded, holiday) values (4, kittitas, 789.3, 10292, 7, 95214, 13, null, 687943532321, null)";
-        String insert5  = "insert into t2 (rowid, name, area, population, counselors, zip, parks, avg_age, founded, holiday) values (5, yakima, 150.4, 9972, 9, 95215, 98, 33.87, 687943533212, 1531618670000)";
-        String insert6  = "insert into t2 (rowid, name, area, population, counselors, zip, parks, avg_age, founded, holiday) values (6, skamania, 150.4, 1900000, 6, 95216, 4, 34.67, 687943531232, 1531618670000)";
-        String insert7  = "insert into t2 (rowid, name, area, population, counselors, zip, parks, avg_age, founded, holiday) values (7, thurston, 345.6, 910000, 7, 95217, 89, 37.80, 687943532312, 1531618670000)";
-        String insert8  = "insert into t2 (rowid, name, area, population, counselors, zip, parks, avg_age, founded, holiday) values (8, snohomish, 534.3, 2000000, 4, 95218, 43, 36.09, 687943532123, 1531618670000)";
-        String insert9  = "insert into t2 (rowid, name, area, population, counselors, zip, parks, avg_age, founded, holiday) values (9, clallam, 789.3, 510000, 3, 95219, 25, 31.95, null, 1531618670000)";
-        String insert10 = "insert into t2 (rowid, name, area, population, counselors, zip, parks, avg_age, founded, holiday) values (10, spokane, 150.4, 1200000, 7, 95220, 65, 29.17, 687943532123, 1531618670000)";
-        String insert11 = "insert into t2 (rowid, name, area, population, counselors, zip, parks, avg_age, founded, holiday) values (11, whitman, 150.4, 130000, 8, 95221, 2, 28.21, 687943532234, 1531618670000)";
-        String insert12 = "insert into t2 (rowid, name, area, population, counselors, zip, parks, avg_age, founded, holiday) values (12, kitsap, 345.6, 360000, 3, null, 20, 40.15, 687943532342, 1531618670000)";
-        String insert13 = "insert into t2 (rowid, name, area, population, counselors, zip, parks, avg_age, founded, holiday) values (13, cowlitz, 534.3, 3400, 7, 95223, 10, 44.99, 687943532345, 1531618670000)";
-        String insert14 = "insert into t2 (rowid, name, area, population, counselors, zip, parks, avg_age, founded, holiday) values (14, chelan, 789.3, 76000, 3, null, 17, 50.00, 687943536452, 1531618670000)";
-        String insert15 = "insert into t2 (rowid, name, area, population, counselors, zip, parks, avg_age, founded, holiday) values (15, klickitat, 150.4, 190000, 5, 95225, 13, 43.12, 687943534562, null)";
-        String insert16 = "insert into t2 (rowid, name, area, population, counselors, zip, parks, avg_age, founded, holiday) values (16, wahkiakum, 150.4, 1300, 7, 95225, 87, 27.54, 687943535672, 1531618670000)";
-        String insert17 = "insert into t2 (rowid, name, area, population, counselors, zip, parks, avg_age, founded, holiday) values (17, benton, 150.4, null, 4, 95226, 7, 29.21, 687943538762, 1531618670000)";
-        String insert18 = "insert into t2 (rowid, name, area, population, counselors, zip, parks, avg_age, founded, holiday) values (18, okanogan, 150.4, 19000, 7, 95227, 6, 33.12, null, 1531618670000)";
+        String insert1  = "insert into wa_counties (rowid, name, area, population, counselors, zip, parks, avg_age, founded, holiday) values (1, whatcom, 150.4, 21000, 7, 95211, 2, 43.21, 687943532123, 1531618670000)";
+        String insert2  = "insert into wa_counties (rowid, name, area, population, counselors, zip, parks, avg_age, founded, holiday) values (2, king, 345.6, 2987678, 8, 95212, null, 41.31, 687943532123, 1531618670000)";
+        String insert3  = "insert into wa_counties (rowid, name, area, population, counselors, zip, parks, avg_age, founded, holiday) values (3, pierce, 534.3, 5476, 8, 95213, 23, 36.90, 687943532123, 1531618670000)";
+        String insert4  = "insert into wa_counties (rowid, name, area, population, counselors, zip, parks, avg_age, founded, holiday) values (4, kittitas, 789.3, 10292, 7, 95214, 13, null, 687943532321, null)";
+        String insert5  = "insert into wa_counties (rowid, name, area, population, counselors, zip, parks, avg_age, founded, holiday) values (5, yakima, 150.4, 9972, 9, 95215, 98, 33.87, 687943533212, 1531618670000)";
+        String insert6  = "insert into wa_counties (rowid, name, area, population, counselors, zip, parks, avg_age, founded, holiday) values (6, skamania, 150.4, 1900000, 6, 95216, 4, 34.67, 687943531232, 1531618670000)";
+        String insert7  = "insert into wa_counties (rowid, name, area, population, counselors, zip, parks, avg_age, founded, holiday) values (7, thurston, 345.6, 910000, 7, 95217, 89, 37.80, 687943532312, 1531618670000)";
+        String insert8  = "insert into wa_counties (rowid, name, area, population, counselors, zip, parks, avg_age, founded, holiday) values (8, snohomish, 534.3, 2000000, 4, 95218, 43, 36.09, 687943532123, 1531618670000)";
+        String insert9  = "insert into wa_counties (rowid, name, area, population, counselors, zip, parks, avg_age, founded, holiday) values (9, clallam, 789.3, 510000, 3, 95219, 25, 31.95, null, 1531618670000)";
+        String insert10 = "insert into wa_counties (rowid, name, area, population, counselors, zip, parks, avg_age, founded, holiday) values (10, spokane, 150.4, 1200000, 7, 95220, 65, 29.17, 687943532123, 1531618670000)";
+        String insert11 = "insert into wa_counties (rowid, name, area, population, counselors, zip, parks, avg_age, founded, holiday) values (11, whitman, 150.4, 130000, 8, 95221, 2, 28.21, 687943532234, 1531618670000)";
+        String insert12 = "insert into wa_counties (rowid, name, area, population, counselors, zip, parks, avg_age, founded, holiday) values (12, kitsap, 345.6, 360000, 3, null, 20, 40.15, 687943532342, 1531618670000)";
+        String insert13 = "insert into wa_counties (rowid, name, area, population, counselors, zip, parks, avg_age, founded, holiday) values (13, cowlitz, 534.3, 3400, 7, 95223, 10, 44.99, 687943532345, 1531618670000)";
+        String insert14 = "insert into wa_counties (rowid, name, area, population, counselors, zip, parks, avg_age, founded, holiday) values (14, chelan, 789.3, 76000, 3, null, 17, 50.00, 687943536452, 1531618670000)";
+        String insert15 = "insert into wa_counties (rowid, name, area, population, counselors, zip, parks, avg_age, founded, holiday) values (15, klickitat, 150.4, 190000, 5, 95225, 13, 43.12, 687943534562, null)";
+        String insert16 = "insert into wa_counties (rowid, name, area, population, counselors, zip, parks, avg_age, founded, holiday) values (16, wahkiakum, 150.4, 1300, 7, 95225, 87, 27.54, 687943535672, 1531618670000)";
+        String insert17 = "insert into wa_counties (rowid, name, area, population, counselors, zip, parks, avg_age, founded, holiday) values (17, benton, 150.4, null, 4, 95226, 7, 29.21, 687943538762, 1531618670000)";
+        String insert18 = "insert into wa_counties (rowid, name, area, population, counselors, zip, parks, avg_age, founded, holiday) values (18, okanogan, 150.4, 19000, 7, 95227, 6, 33.12, null, 1531618670000)";
 
-        String query = "select * from t2";
+        String query = "select * from wa_counties";
 
         parseCreateTable(createTexasCounties);
         parseInsert(insert1);
@@ -2947,18 +2942,4 @@ public class BeaverBase {
         parseQuery(query);
     }
 
-    public static void test2(){
-        initializeDataStore();
-        String createTexasCounties = "create t3 ( "
-                + "rowid int primary key, "
-                + "name text, "
-                + "area double not nullable, "
-                + "population bigint"
-                + " )";
-        parseCreateTable(createTexasCounties);
-    }
-
-    public static void test3(){
-         createPage("beaverbase_columns"); /*if not, extend the table*/
-    }
 }

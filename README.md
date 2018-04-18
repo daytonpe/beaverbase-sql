@@ -12,7 +12,7 @@ TO RUN...
 $cd beaverbase
 $javac BeaverBase.java
 $cd ..
-$java -cp . beaverbase.Main
+$java -cp . beaverbase.BeaverBase
 
 ********************
 

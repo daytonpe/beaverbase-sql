@@ -1664,11 +1664,11 @@ public class BeaverBase {
 
     /*insert byte array into table -- helper method for update*/
     public static void insertByteArray(
-            byte[] record,
-            String tableName,
-            int recordPayloadLength,
-            boolean shorterFlag,
-            int originalAddress) {
+        byte[] record,
+        String tableName,
+        int recordPayloadLength,
+        boolean shorterFlag,
+        int originalAddress) {
         /*connect to correct table page*/
         int payloadLength = record.length;
 
@@ -1873,10 +1873,10 @@ public class BeaverBase {
 
     /*create new table*/
     public static void createTable(
-            String tableName,
-            ArrayList<String> columnList,
-            ArrayList<String> columnDataTypeList,
-            ArrayList<String> isNullableList) {
+        String tableName,
+        ArrayList<String> columnList,
+        ArrayList<String> columnDataTypeList,
+        ArrayList<String> isNullableList) {
 
         /*if the table name is already in use, break*/
         if(tableExists(tableName)){
@@ -1921,7 +1921,7 @@ public class BeaverBase {
 
         /*update beaverbase_tables in catalog*/
         try{
-            /*grab the file to write to*/
+            /*write to catalog/beaverbase_tables*/
             RandomAccessFile beaverbase_tables = new RandomAccessFile("data/catalog/beaverbase_tables.tbl", "rw");
             beaverbase_tables.seek(0);
             int pageType = beaverbase_tables.read();
@@ -1980,10 +1980,6 @@ public class BeaverBase {
             System.out.println(e);
         }
 
-//        /*ensure there is space for payload*/
-//        if (!hasSpace(tableName, payloadLength))
-//            createPage(tableName); /*if not, extend the table*/
-
         /*update beaverbase_columns*/
         try{
             /*grab the file to write to*/
@@ -2007,36 +2003,59 @@ public class BeaverBase {
 
             /*insert each of the columns as rows in beaverbase_columns.tbl*/
             for (int i = 0; i < numColumns; i++) {
-                /*increment number of records*/
-                beaverbase_columns.seek(1);
-                recordCount = beaverbase_columns.read();
-                recordCount++;
-                beaverbase_columns.seek(1);
-                beaverbase_columns.write(recordCount);
-
-                /*retrieve start of content*/
-                beaverbase_columns.seek(2);
-                int startOfContent = beaverbase_columns.readShort();
 
                 /*calculate payload length -- rowId + numCols + colTypes + column names/types*/
                 int catalogColumnsPayloadLength = 2 + 4 + 1 + 5 + tableName.length() + columnList.get(i).length() + columnDataTypeList.get(i).length() + 1 + isNullableList.get(i).length();
 
+                /*ensure there is space for payload*/
+                if (!hasSpace("beaverbase_columns", catalogColumnsPayloadLength))
+                    createPage("beaverbase_columns"); /*if not, extend the table*/
+
+                /*read the page pointers and seek to the header of the newest page*/
+                beaverbase_columns.seek(4);
+                int pagePointer = beaverbase_columns.readInt();
+                int pageNumber = 1;
+                int pageStart = 0;
+
+                while(pagePointer != -1){
+                    pageStart+=pageSize;
+                    beaverbase_columns.seek(pageStart+4);
+                    pagePointer = beaverbase_columns.readInt();
+                    pageNumber++;
+                }
+
+                /*increment number of records*/
+                beaverbase_columns.seek(pageStart+1);
+                recordCount = beaverbase_columns.read();
+                recordCount++;
+                beaverbase_columns.seek(pageStart+1);
+                beaverbase_columns.write(recordCount);
+
+                /*retrieve start of content*/
+                beaverbase_columns.seek(pageStart+2);
+                int startOfContent = beaverbase_columns.readShort();
+
                 /*update the start of content*/
                 int newStartOfContent = startOfContent - catalogColumnsPayloadLength;
-                beaverbase_columns.seek(2);
+                beaverbase_columns.seek(pageStart+2);
                 beaverbase_columns.writeShort(newStartOfContent);
 
-                /*add the location of the new record to list*/
-                int recordLocationPosition = 8+((recordCount-1)*2);
-                beaverbase_columns.seek(recordLocationPosition);
+                /*add record location to list*/
+                int recordPointerPosition = pageStart+8;
+                beaverbase_columns.seek(recordPointerPosition);
+                int recordPointer = beaverbase_columns.readShort();
+                while(recordPointer!=0){
+                    recordPointerPosition+=2;
+                    recordPointer = beaverbase_columns.readShort();
+                }
+                beaverbase_columns.seek(recordPointerPosition);
                 beaverbase_columns.writeShort(newStartOfContent);
 
                 /*seek to new start of content to write payload*/
                 beaverbase_columns.seek(newStartOfContent);
 
                 /*write payload*/
-                int recordLocation = startOfContent - catalogColumnsPayloadLength;
-                beaverbase_columns.seek(recordLocation);
+                beaverbase_columns.seek(newStartOfContent);
 
                 beaverbase_columns.writeShort(catalogColumnsPayloadLength - 12); //record payload length (not including record header)
                 beaverbase_columns.writeInt(rowId); //rowId
@@ -2662,9 +2681,9 @@ public class BeaverBase {
         initializeDataStore();
         String createTexasCounties = "create t1 ( "
                 + "rowid int primary key, "
-                + "name text not nullable, "
-                + "area double, "
-                + "population bigint not nullable, "
+                + "name text, "
+                + "area double not nullable, "
+                + "population bigint, "
                 + "counselors tinyint, "
                 + "zip int, "
                 + "parks smallint, "
@@ -2696,25 +2715,24 @@ public class BeaverBase {
 
         parseCreateTable(createTexasCounties);
         parseInsert(insert1);
-//        parseInsert(insert2);
-//        parseInsert(insert3);
-//        parseInsert(insert4);
-//        parseInsert(insert5);
-//        parseInsert(insert6);
-//        parseInsert(insert7);
-//        parseInsert(insert8);
-//        parseInsert(insert9);
-//        parseInsert(insert10);
-//        parseInsert(insert11);
-//        parseInsert(insert12);
-//        parseInsert(insert13);
-//        parseInsert(insert14);
-//        parseInsert(insert15);
-//        parseInsert(insert16);
-//        parseInsert(insert17);
-//        parseInsert(insert18);
-//        parseQuery(query);
-
+        parseInsert(insert2);
+        parseInsert(insert3);
+        parseInsert(insert4);
+        parseInsert(insert5);
+        parseInsert(insert6);
+        parseInsert(insert7);
+        parseInsert(insert8);
+        parseInsert(insert9);
+        parseInsert(insert10);
+        parseInsert(insert11);
+        parseInsert(insert12);
+        parseInsert(insert13);
+        parseInsert(insert14);
+        parseInsert(insert15);
+        parseInsert(insert16);
+        parseInsert(insert17);
+        parseInsert(insert18);
+        parseQuery(query);
     }
 
     /*clean and sort headers -- delete -1 values, order per rowid*/
@@ -2731,9 +2749,13 @@ public class BeaverBase {
     /*check if there is space to insert a new record and it's corresponding record pointer, leaving 2 zeros as buffer*/
     public static boolean hasSpace(String tableName, int recordLength){
         try{
-            RandomAccessFile table = new RandomAccessFile("data/user_data/"+tableName+".tbl", "rw");
+            RandomAccessFile table;
+            if (tableName.equals("beaverbase_columns") || tableName.equals("beaverbase_tables")) {
+                table = new RandomAccessFile("data/catalog/"+tableName+".tbl", "rw");
+            } else {
+                table = new RandomAccessFile("data/user_data/"+tableName+".tbl", "rw");
+            }
 
-            /*read the page pointers and seek to the header of the newest page*/
             /*read the page pointers and seek to the header of the newest page*/
             table.seek(4);
             int pagePointer = table.readInt();
@@ -2776,8 +2798,8 @@ public class BeaverBase {
     public static void test1(){
         String createTexasCounties = "create t2 ( "
                 + "rowid int primary key, "
-                + "name text not nullable, "
-                + "area double, "
+                + "name text, "
+                + "area double not nullable, "
                 + "population bigint, "
                 + "counselors tinyint, "
                 + "zip int, "
@@ -2831,18 +2853,34 @@ public class BeaverBase {
     }
 
     public static void test2(){
-        initializeDataStore();
+        String createTexasCounties = "create t3 ( "
+                + "rowid int primary key, "
+                + "name text, "
+                + "area double not nullable, "
+                + "population bigint, "
+                + "counselors tinyint, "
+                + "zip int, "
+                + "parks smallint, "
+                + "avg_age real, "
+                + "founded datetime, "
+                + "holiday date"
+                + " )";
+        parseCreateTable(createTexasCounties);
     }
 
     public static void test3(){
-         String insert19  = "insert into table (rowid, name, area, population, counselors, zip, parks, avg_age, founded, holiday) t1 (1, archer, 150.4, null, 7, 75111, 2, 43.21, 687943532123, 1531618670000)";
-         parseInsert(insert19);
+         createPage("beaverbase_columns"); /*if not, extend the table*/
     }
 
     /*add one pagelength worth of bytes to a .tbl file*/
     public static void createPage(String tableName){
         try{
-            RandomAccessFile table = new RandomAccessFile("data/user_data/"+tableName+".tbl", "rw");
+            RandomAccessFile table;
+            if (tableName.equals("beaverbase_columns") || tableName.equals("beaverbase_tables")) {
+                table = new RandomAccessFile("data/catalog/"+tableName+".tbl", "rw");
+            } else {
+                table = new RandomAccessFile("data/user_data/"+tableName+".tbl", "rw");
+            }
 
             /*initialize byte[] we will use to extend our page*/
             byte[] b = new byte[(int)pageSize];

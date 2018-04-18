@@ -248,30 +248,19 @@ public class BeaverBase {
         }
 
         ArrayList<String> whereSplit = new ArrayList<>(Arrays.asList(fromSplit.get(1).split("where")));
-        //System.out.println("whereSplit = " + whereSplit);
         ArrayList<String> changeArray = new ArrayList<>(Arrays.asList(whereSplit.get(0).split(" ")));
-        //System.out.println("changeArray = " + changeArray);
         changeColumn = changeArray.get(1).replace(" ", "").replace(",","");
-        //System.out.println("changeColumn = " + changeColumn);
         changeValue = changeArray.get(3).replace(" ", "").replace(",","");
-        //System.out.println("changeValue = " + changeValue);
 
         ArrayList<String> constraintArray = new ArrayList<>(Arrays.asList(whereSplit.get(1).split(" ")));
         constraintColumn = constraintArray.get(1).replace(" ", "").replace(",","");
         constraintOperator = constraintArray.get(2).replace(" ", "").replace(",","");
         constraintValue = constraintArray.get(3).replace(" ", "").replace(",","");
-        //System.out.println("constraintArray = " + constraintArray);
-        //System.out.println("constraintOperator = " + constraintOperator);
-        //System.out.println("constraintColumn = " + constraintColumn);
-        //System.out.println("constraintValue = " + constraintValue);
 
         /*retrieve table information about columns*/
         ArrayList<String> columnListActual = getTableInformation(tableName, "columnList");
-        //System.out.println("columnListActual = " + columnListActual.toString());
         ArrayList<String> notNullList = getTableInformation(tableName, "nullList");
-        //System.out.println("notNullList = " + notNullList.toString());
         ArrayList<String> dataTypeList = getTableInformation(tableName, "dataTypeList");
-        //System.out.println("dataTypeList = " + dataTypeList.toString());
 
         /*validate query columns*/
         if(changeColumn.equals("rowid")){
@@ -421,7 +410,6 @@ public class BeaverBase {
         ArrayList<String> columnListActual = getTableInformation(tableName, "columnList");
         ArrayList<String> notNullList = getTableInformation(tableName, "nullList");
         ArrayList<String> dataTypeList = getTableInformation(tableName, "dataTypeList");
-        ArrayList<String> ordinalPositionList = getTableInformation(tableName, "ordinalPositionList");
 
         /*if a wildcard is given, add all columns to the column list*/
         if (columnList.contains("*")) {
@@ -431,7 +419,7 @@ public class BeaverBase {
         /*validate query columns*/
         if (validateQueryColumns(columnList, columnListActual)) {
            /*pass values on to be printed by printQueryResults*/
-            printQueryResults(
+            queryRecords(
                 tableName,
                 hasConstraint,
                 constraintColumn,
@@ -440,15 +428,14 @@ public class BeaverBase {
                 columnList,
                 columnListActual,
                 notNullList,
-                dataTypeList,
-                ordinalPositionList);
+                dataTypeList);
         }
         else{
             System.out.println("invalid columns in query");
         }
     }
 
-    /*parse out info from create table command*/
+    /*parse create table*/
     public static void parseCreateTable(String createTableString) {
         /*initial parsing*/
         ArrayList<String> columnList = new ArrayList<>();
@@ -458,7 +445,7 @@ public class BeaverBase {
         ArrayList<String> split1 = new ArrayList<>(Arrays.asList(createTableString.split("\\(")));
         ArrayList <String> split2 = new ArrayList<>(Arrays.asList(split1.get(0).split(" ")));
 
-        String tableName = split2.get(1)
+        String tableName = split2.get(2)
             .trim()
             .replace(",", "")
             .replaceAll("\\s+", "");
@@ -511,7 +498,7 @@ public class BeaverBase {
         }
 
         if (!isNullableList.contains("NO")) {
-            System.out.println("\nNew tables must have one NOT NULLABLE attribute (Cannot be rowid).");
+            System.out.println("\nNew tables must have one NOT NULLABLE attribute (Cannot be rowid).\n");
             return;
         }
 
@@ -523,6 +510,7 @@ public class BeaverBase {
         );
     }
 
+    /*parse insert*/
     public static void parseInsert(String insertString){
         ArrayList<String> columnList;
         ArrayList<String> valueList;
@@ -554,7 +542,7 @@ public class BeaverBase {
 
         /*if the table into which we are inserting doesn't exist, break*/
         if(!tableExists(tableName)){
-            System.out.println("\n"+tableName + " does not exist.\n");
+            System.out.println(tableName + " does not exist.\n");
             return;
         }
 
@@ -1210,7 +1198,6 @@ public class BeaverBase {
                         byte[] temp = new byte[textConstraintLength];
                         table.read(temp);
                         String actualConstraintValue1 = new String(temp);
-                        //System.out.println("actualConstraintValue1 =? constraintValue : " + actualConstraintValue1 +" =? "+constraintValue);
                         /* Test if we match constraint depending on constraint operator.
                         For TEXT data type only != and = are sensical */
                         switch (constraintOperator) {
@@ -1223,53 +1210,39 @@ public class BeaverBase {
                             default:
                                 throw new Error("Invalid constraint "+constraintOperator);
                         }
-
-
                     }
                     else{
                         switch (recordConstraintType) {
                             case "tinyint":
                                 int actualConstraintValue2 = table.readByte();
-                                //System.out.println("actualConstraintValue2 = "+actualConstraintValue2);
                                 foundMatch = checkIntConstraint(actualConstraintValue2, Integer.parseInt(constraintValue), constraintOperator);
                                 break;
                             case "smallint":
                                 int actualConstraintValue3 = table.readShort();
-                                //System.out.println("actualConstraintValue3 = "+actualConstraintValue3);
                                 foundMatch = checkIntConstraint(actualConstraintValue3, Integer.parseInt(constraintValue), constraintOperator);
                                 break;
                             case "int":
-                                //System.out.println("pointer: "+table.getFilePointer());
                                 int actualConstraintValue4 = table.readInt();
-                                //System.out.println("actualConstraintValue4 = "+actualConstraintValue4);
-                                //System.out.println("actualConstraintValue4 =? constraintValue :" + actualConstraintValue4 +" =? "+constraintValue);
                                 foundMatch = checkIntConstraint(actualConstraintValue4, Integer.parseInt(constraintValue), constraintOperator);
                                 break;
                             case "bigint":
                                 long actualConstraintValue5 = table.readLong();
-                                //System.out.println("actualConstraintValue5 = "+actualConstraintValue5);
                                 foundMatch = checkLongConstraint(actualConstraintValue5, Long.parseLong(constraintValue), constraintOperator);
                                 break;
                             case "real":
                                 float actualConstraintValue6 = table.readFloat();
-                                //System.out.println("actualConstraintValue6 = "+actualConstraintValue6);
                                 foundMatch = checkFloatConstraint(actualConstraintValue6, Float.parseFloat(constraintValue), constraintOperator);
                                 break;
                             case "double":
-                                //System.out.println("pointer: "+table.getFilePointer());
                                 double actualConstraintValue7 = table.readDouble();
-                                //System.out.println("actualConstraintValue7 = "+actualConstraintValue7);
-                                //System.out.println("actualConstraintValue7 =? constraintValue :" + actualConstraintValue7 +" =? "+constraintValue);
                                 foundMatch = checkDoubleConstraint(actualConstraintValue7, Double.parseDouble(constraintValue), constraintOperator);
                                 break;
                             case "datetime":
                                 long actualConstraintValue8 = table.readLong();
-                                //System.out.println("actualConstraintValue8 = "+actualConstraintValue8);
                                 foundMatch = checkLongConstraint(actualConstraintValue8, Long.parseLong(constraintValue), constraintOperator);
                                 break;
                             case "date":
                                 long actualConstraintValue9 = table.readLong();
-                                //System.out.println("actualConstraintValue9 = "+actualConstraintValue9);
                                 foundMatch = checkLongConstraint(actualConstraintValue9, Long.parseLong(constraintValue), constraintOperator);
                                 break;
                             default:
@@ -1277,7 +1250,6 @@ public class BeaverBase {
                         }
                     }
 
-                    //System.out.println("foundMatch = " + foundMatch);
 
                     /*print the columns that match*/
                     if (foundMatch) {
@@ -1296,7 +1268,6 @@ public class BeaverBase {
 
                         /*third where the record payload actually starts*/
                         int recordPayloadPointer = recordLocation+7+numColumns;
-                        //System.out.println("recordPayloadPointer = " + recordPayloadPointer);
 
                         int dataType = 0;
 
@@ -1309,7 +1280,6 @@ public class BeaverBase {
                             /*increment our pointers*/
                             dataTypesPointer++; //simple increment since all singly bytes
                             dataType = table.readByte();
-                            //System.out.println("dataType = " + convertTypeCode(dataType));
                             if (dataType>0xB) { //more complicated when content size is variable
                                 recordPayloadPointer+=dataType-0xC; //if text
                             }else{
@@ -1427,6 +1397,8 @@ public class BeaverBase {
                         }
                     }
                 } while (recordsVisited < originalRecordCount);
+
+//                System.out.println("pagePointer = " + pagePointer);
 
                 /*if the page we just visited has no following pages, close and return*/
                 if(pagePointer == -1){
@@ -1659,7 +1631,7 @@ public class BeaverBase {
     }
 
     /*print query results from parsed query parameters*/
-    public static void printQueryResults(
+    public static void queryRecords(
         String tableName,
         boolean hasConstraint,
         String constraintColumn,
@@ -1668,8 +1640,7 @@ public class BeaverBase {
         ArrayList<String> columnList,
         ArrayList<String> columnListActual,
         ArrayList<String> notNullList,
-        ArrayList<String> dataTypeList,
-        ArrayList<String> ordinalPositionList
+        ArrayList<String> dataTypeList
         ){
 
         /*print header*/
@@ -1737,7 +1708,6 @@ public class BeaverBase {
                     /*seek to record*/
                     table.seek(recordLocation);
 
-
                     /*save values that are always at same offsets*/
                     int recordPayloadLength = table.readShort();
                     int rowId = table.readInt();
@@ -1754,11 +1724,9 @@ public class BeaverBase {
                             recordConstraintOffset+=getContentSize(dataTypeList.get(j)); //accounted for all but the strings
 
                             int columnTypeByte = table.readByte();
-                            //System.out.println("columnTypeByte = " + columnTypeByte);
 
                             if (columnTypeByte>0xB) { //if we find a TEXT type
                                 recordConstraintOffset+= (columnTypeByte -0xC);
-                                //System.out.println("adding "+(columnTypeByte -0xC));
                             }
                         }
                         if(recordConstraintType.equals("TEXT")){
@@ -1773,8 +1741,6 @@ public class BeaverBase {
 
                     /*check if record matches where condition*/
                     boolean foundMatch = false;
-
-                    //System.out.println("recordConstraintType = " + recordConstraintType);
 
                     if (!hasConstraint){ //if it doesn't have any constraints, then everything is a match
                         foundMatch = true;
@@ -1839,14 +1805,10 @@ public class BeaverBase {
                         }
                     }
 
-                    //System.out.println("foundMatch = " + foundMatch);
-
                     /*print the columns that match*/
                     if (foundMatch) {
-
                         ArrayList <Boolean> booleanPrintList = getBooleanPrintArray(columnList, columnListActual);
                         ArrayList <Integer> dataTypesHexList = new ArrayList<>();
-                        //System.out.println("booleanPrintList= " + booleanPrintList.toString());
 
                         /*since in a different place, we need to print rowid first if applicable*/
                         if (booleanPrintList.get(0)) {
@@ -1873,6 +1835,7 @@ public class BeaverBase {
                             if (booleanPrintList.get(j)) {
                                 /*print it based on what type it is*/
                                 table.seek(recordPayloadPointer);
+//                                System.out.println("\n\ndataType = " + dataType + " from recordPayloadPointer = "+recordPayloadPointer);
                                 switch (convertTypeCode(dataType)) {
                                     case "null":
                                         System.out.print(String.format("%-16s" , "NULL"));
@@ -1985,18 +1948,18 @@ public class BeaverBase {
             }
 
             /*increment recordCount*/
-            table.seek(pageStart+1);
-            int recordCount = table.readByte();
-            recordCount++;
-            table.seek(pageStart+1);
-            table.writeByte(recordCount);
+            if (!shorterFlag) {
+               table.seek(pageStart+1);
+               int recordCount = table.readByte();
+               recordCount++;
+               table.seek(pageStart+1);
+               table.writeByte(recordCount);
+            }
+
 
             /*save start of Content Location*/
             table.seek(pageStart+2);
             int startOfContent = table.readShort();
-
-
-
 
             /*if the new text value is shorter, we insert it in the same spot*/
             if(shorterFlag){
@@ -2127,8 +2090,6 @@ public class BeaverBase {
         ArrayList<String> columnListActualTables = new ArrayList<>();
         columnListActualTables.add("rowid");
         columnListActualTables.add("table_name");
-
-        //System.out.println("columnListActualTables = " + columnListActualTables.toString());
 
         ArrayList<String> notNullListTables = new ArrayList<>();
         notNullListTables.add("YES");
@@ -2364,7 +2325,7 @@ public class BeaverBase {
         return i;
     }
 
-    /*get table information from beaverbase_columns. requests can be dataTypeList, columnList, nullList, ordinalPositionList*/
+    /*get table information from beaverbase_columns. requests can be dataTypeList, columnList, nullList*/
     public static ArrayList<String>  getTableInformation(
         String tableName,
         String request
@@ -2372,7 +2333,6 @@ public class BeaverBase {
         ArrayList<String> nullList = new ArrayList<>();
         ArrayList<String> dataTypeList = new ArrayList<>();
         ArrayList<String> columnList = new ArrayList<>();
-        ArrayList<String> ordinalPositionList = new ArrayList<>();
 
         try{
             RandomAccessFile table = new RandomAccessFile("data/catalog/beaverbase_columns.tbl", "rw");
@@ -2454,14 +2414,12 @@ public class BeaverBase {
                             nullList.add(null);
                             dataTypeList.add(null);
                             columnList.add(null);
-                            ordinalPositionList.add(null);
                         }
 
                         /*save to array lists in ordinal positions*/
                         dataTypeList.set(ordinalPosition-1, dataType);
                         columnList.set(ordinalPosition-1, columnName);
                         nullList.set(ordinalPosition-1, isNullable);
-                        ordinalPositionList.set(ordinalPosition-1, String.valueOf(ordinalPosition));
                     }
                 } while (recordsVisited < originalRecordCount);
 
@@ -2477,8 +2435,6 @@ public class BeaverBase {
                             return columnList;
                         case "nullList":
                             return nullList;
-                        case "ordinalPositionList":
-                            return ordinalPositionList;
                         default:
                             System.out.println("You have entered an invalid request: \"" + request + "\"");
                     }
@@ -2875,7 +2831,7 @@ public class BeaverBase {
     /*reinstall database, create t1 table and insert texas_county data*/
     public static void initialize(){
         initializeDataStore();
-        String createTexasCounties = "create t1 ( "
+        String createTexasCounties = "create table t1 ( "
                 + "rowid int primary key, "
                 + "name text, "
                 + "area double not nullable, "
@@ -2934,7 +2890,8 @@ public class BeaverBase {
     }
 
     public static void test1(){
-        String createTexasCounties = "create t2 ( "
+        initializeDataStore();
+        String createTexasCounties = "create table t2 ( "
                 + "rowid int primary key, "
                 + "name text, "
                 + "area double not nullable, "

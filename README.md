@@ -7,7 +7,7 @@ BEAVERBASE -- SQL ENGINE
 
 ********************
 
-GETTING UP AND RUNNING
+TO RUN...
 
 $cd beaverbase
 $javac BeaverBase.java
@@ -18,7 +18,7 @@ $java -cp . beaverbase.Main
 
 SEED DATA
 
-I wrote two functions to quickly display the features of my database.
+I wrote two functions to quickly display the features of my database. After using INSTALL to clear everything:
 
 TXINIT;
 Creates a table representing data of Texas Counties and inserts 18 records.
@@ -33,7 +33,8 @@ Same as TXINIT except utilizes null values;
 
 EXTRA FEATURES
 
--Delete was fully implemented
+-Delete was implemented
+-All constraint based commands can use any logical operator (<, <=, =, !=, >, >=)
 
 ********************
 
@@ -54,3 +55,8 @@ I've also included some screenshots to help show what syntax I was using in case
 
 When I have more time to put toward the project I hope to clean up some of the sloppy code segments in order
 to make the project more readable and efficient.
+
+
+********************
+
+PS It's called beaverbase because my undergrad mascot was the beaver.

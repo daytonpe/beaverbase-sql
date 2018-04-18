@@ -2119,112 +2119,124 @@ public class BeaverBase {
         ArrayList<String> columnList = new ArrayList<>();
         ArrayList<String> ordinalPositionList = new ArrayList<>();
 
-        //System.out.println("tableName = " + tableName);
         try{
             RandomAccessFile table = new RandomAccessFile("data/catalog/beaverbase_columns.tbl", "rw");
-            table.seek(1);
-            int recordCount = table.read();
+
+            /*outer while loop searches through all the pages in the file*/
+            table.seek(4);
+            int pagePointer = table.readInt();
+            int pageNumber = 1;
+            int pageStart = 0;
+
+            while(true){
+
+                /*determine number of records*/
+                table.seek(pageStart+1);
+                int recordCount = table.read();
+
+                /*get a copy for looping purposes*/
+                table.seek(pageStart+1);
+                int originalRecordCount = table.read();
+
+                /*
+                recordCount will change if we delete a record. So we can't use it for looping through a page
+                deleted record pointers will count in our looping value.
+                */
+                int recordsVisited = 0;
+                int recordPointer = pageStart+8;
 
 
+                /*loop through the records in the beaverbase_columnspage (linearly)*/
+                do{
+                    /*get location of next title*/
+                    table.seek(recordPointer);
+                    int recordLocation = table.readShort();
+                    recordPointer+=2;
 
-            /*
-            recordCount will change if we delete a record. So we can't use it for looping through a page
-            deleted record pointers will count in our looping value.
-            */
-            int recordsVisited = 0;
+                    /*checkpoint -- if record has been deleted, do not continue*/
+                    if (recordLocation == -1)
+                        continue;
 
-            /*loop through the records in the beaverbase_columnspage (linearly)*/
-            while(recordsVisited < recordCount){
-                //System.out.println("recordsVisited = " + recordsVisited);
-                recordsVisited++;
-                /*get location of next title*/
-                table.seek(8+((recordsVisited-1)*2));
-                int recordLocation = table.readShort();
-                //System.out.println("recordLocation = " + recordLocation
+                    recordsVisited++;
 
-                /*checkpoint -- if record has been deleted, do not continue*/
-                if (recordLocation == -1)
-                    continue;
+                    /*locate, read, and save values of column types*/
+                    table.seek(recordLocation+7); //table name
+                    int tableNameLength = table.readByte()-0xC;
+                    int columnNameLength = table.readByte()-0xC;
+                    int dataTypeLength = table.readByte()-0xC;
+                    table.readByte(); //necessary spacer?
+                    int isNullableLength = table.readByte()-0xC;
 
-                /*locate, read, and save values of column types*/
-                table.seek(recordLocation+7); //table name
-                //System.out.println("SEEKING: "+(recordLocation+7));
-                int tableNameLength = table.readByte()-0xC;
-                //System.out.println("tableNameLength = " + tableNameLength);
-                int columnNameLength = table.readByte()-0xC;
-                //System.out.println("columnNameLength = " + columnNameLength);
-                int dataTypeLength = table.readByte()-0xC;
-                //System.out.println("dataTypeLength = " + dataTypeLength);
-                int ordinalPositionType = table.readByte();
-                //System.out.println("ordinalPositionType = " + ordinalPositionType);
-                int isNullableLength = table.readByte()-0xC;
-                //System.out.println("isNullableLength = " + isNullableLength);
 
-                /*read table name associated with this column*/
-                byte[] readTableName = new byte[tableNameLength];
-                table.read(readTableName);
-                String readTableNameString = new String(readTableName);
-                //System.out.println("readTableNameString = " + readTableNameString);
+                    /*read table name associated with this column*/
+                    byte[] readTableName = new byte[tableNameLength];
+                    table.read(readTableName);
+                    String readTableNameString = new String(readTableName);
 
-                /*check if table name is same as table for which we are looking*/
-                //System.out.println(tableName.equals(readTableNameString));
+                    /*check if table name is same as table for which we are looking*/
+                    if (tableName.equals(readTableNameString)){
+                        /*if it matches, add everything to the data arrayLists*/
+                        /*column name*/
+                        byte[] readColumnName = new byte[columnNameLength];
+                        table.read(readColumnName);
+                        String columnName = new String(readColumnName);
 
-                if (tableName.equals(readTableNameString)){
-                    /*if it matches, add everything to the data arrayLists*/
+                        /*data type*/
+                        byte[] readDataType = new byte[dataTypeLength];
+                        table.read(readDataType);
+                        String dataType = new String(readDataType);
 
-                    /*column name*/
-                    byte[] readColumnName = new byte[columnNameLength];
-                    table.read(readColumnName);
-                    String columnName = new String(readColumnName);
-                    //System.out.println("columnName = " + columnName);
+                        /*ordinal position*/
+                        int ordinalPosition = table.readByte();
 
-                    /*data type*/
-                    byte[] readDataType = new byte[dataTypeLength];
-                    table.read(readDataType);
-                    String dataType = new String(readDataType);
-                    //System.out.println("dataType = " + dataType);
+                        /*is nullable*/
+                        byte[] readIsNullable = new byte[isNullableLength];
+                        table.read(readIsNullable);
+                        String isNullable = new String(readIsNullable);
 
-                    /*ordinal position*/
-                    int ordinalPosition = table.readByte();
-                    //System.out.println("ordinalPosition = " + ordinalPosition);
+                        /*make sure that each of our lists are big enough*/
+                        while(ordinalPosition > nullList.size()){
+                            nullList.add(null);
+                            dataTypeList.add(null);
+                            columnList.add(null);
+                            ordinalPositionList.add(null);
+                        }
 
-                    /*is nullable*/
-                    byte[] readIsNullable = new byte[isNullableLength];
-                    table.read(readIsNullable);
-                    String isNullable = new String(readIsNullable);
-                    //System.out.println("isNullable = " + isNullable);
-
-                    /*make sure that each of our lists are big enough*/
-                    while(ordinalPosition > nullList.size()){
-                        nullList.add(null);
-                        dataTypeList.add(null);
-                        columnList.add(null);
-                        ordinalPositionList.add(null);
+                        /*save to array lists in ordinal positions*/
+                        dataTypeList.set(ordinalPosition-1, dataType);
+                        columnList.set(ordinalPosition-1, columnName);
+                        nullList.set(ordinalPosition-1, isNullable);
+                        ordinalPositionList.set(ordinalPosition-1, String.valueOf(ordinalPosition));
                     }
+                } while (recordsVisited < originalRecordCount);
 
-                    /*save to array lists in ordinal positions*/
-                    dataTypeList.set(ordinalPosition-1, dataType);
-                    columnList.set(ordinalPosition-1, columnName);
-                    nullList.set(ordinalPosition-1, isNullable);
-                    ordinalPositionList.set(ordinalPosition-1, String.valueOf(ordinalPosition));
+
+                /*if the page we just visited has no following pages, close and return*/
+                if(pagePointer == -1){
+                    /*close out of table*/
+                    table.close();
+                    switch (request) {
+                        case "dataTypeList":
+                            return dataTypeList;
+                        case "columnList":
+                            return columnList;
+                        case "nullList":
+                            return nullList;
+                        case "ordinalPositionList":
+                            return ordinalPositionList;
+                        default:
+                            System.out.println("You have entered an invalid request: \"" + request + "\"");
+                    }
                 }
+                /*since we are reading through from first page to last we need to increment these at the end*/
+                pageStart+=pageSize;
+                table.seek(pageStart+4);
+                pagePointer = table.readInt();
+                pageNumber++;
             }
-            table.close();
         }
         catch(IOException e) {
             System.out.println(e);
-        }
-        switch (request) {
-            case "dataTypeList":
-                return dataTypeList;
-            case "columnList":
-                return columnList;
-            case "nullList":
-                return nullList;
-            case "ordinalPositionList":
-                return ordinalPositionList;
-            default:
-                System.out.println("You have entered an invalid request: \"" + request + "\"");
         }
         return null;
     }
@@ -2733,6 +2745,8 @@ public class BeaverBase {
         parseInsert(insert17);
         parseInsert(insert18);
         parseQuery(query);
+
+
     }
 
     /*clean and sort headers -- delete -1 values, order per rowid*/
@@ -2809,24 +2823,24 @@ public class BeaverBase {
                 + "holiday date"
                 + " )";
 
-        String insert1  = "insert into table (rowid, name, area, population, counselors, zip, parks, avg_age, founded, holiday) t2 (1, archer, 150.4, 8809, 7, 75111, 2, 43.21, 687943532123, 1531618670000)";
-        String insert2  = "insert into table (rowid, name, area, population, counselors, zip, parks, avg_age, founded, holiday) t2 (2, dallas, 345.6, 2987678, 8, 75112, null, 41.31, 687943532123, 1531618670000)";
-        String insert3  = "insert into table (rowid, name, area, population, counselors, zip, parks, avg_age, founded, holiday) t2 (3, jack, 534.3, 5476, 8, 75113, 23, 36.90, 687943532123, 1531618670000)";
-        String insert4  = "insert into table (rowid, name, area, population, counselors, zip, parks, avg_age, founded, holiday) t2 (4, montague, 789.3, 10292, 7, 75114, 13, null, 687943532321, null)";
-        String insert5  = "insert into table (rowid, name, area, population, counselors, zip, parks, avg_age, founded, holiday) t2 (5, anderson, 150.4, 9972, 9, 75115, 98, 33.87, 687943533212, 1531618670000)";
-        String insert6  = "insert into table (rowid, name, area, population, counselors, zip, parks, avg_age, founded, holiday) t2 (6, bexar, 150.4, 1900000, 6, 75116, 4, 34.67, 687943531232, 1531618670000)";
-        String insert7  = "insert into table (rowid, name, area, population, counselors, zip, parks, avg_age, founded, holiday) t2 (7, collin, 345.6, 910000, 7, 75117, 89, 37.80, 687943532312, 1531618670000)";
-        String insert8  = "insert into table (rowid, name, area, population, counselors, zip, parks, avg_age, founded, holiday) t2 (8, tarrant, 534.3, 2000000, 4, 75118, 43, 36.09, 687943532123, 1531618670000)";
-        String insert9  = "insert into table (rowid, name, area, population, counselors, zip, parks, avg_age, founded, holiday) t2 (9, williamson, 789.3, 510000, 3, 75119, 25, 31.95, null, 1531618670000)";
-        String insert10 = "insert into table (rowid, name, area, population, counselors, zip, parks, avg_age, founded, holiday) t2 (10, travis, 150.4, 1200000, 7, 75120, 65, 29.17, 687943532123, 1531618670000)";
-        String insert11 = "insert into table (rowid, name, area, population, counselors, zip, parks, avg_age, founded, holiday) t2 (11, comal, 150.4, 130000, 8, 75121, 2, 28.21, 687943532234, 1531618670000)";
-        String insert12 = "insert into table (rowid, name, area, population, counselors, zip, parks, avg_age, founded, holiday) t2 (12, nueces, 345.6, 360000, 3, null, 20, 40.15, 687943532342, 1531618670000)";
-        String insert13 = "insert into table (rowid, name, area, population, counselors, zip, parks, avg_age, founded, holiday) t2 (13, hudspeth, 534.3, 3400, 7, 75123, 10, 44.99, 687943532345, 1531618670000)";
-        String insert14 = "insert into table (rowid, name, area, population, counselors, zip, parks, avg_age, founded, holiday) t2 (14, coryell, 789.3, 76000, 3, null, 17, 50.00, 687943536452, 1531618670000)";
-        String insert15 = "insert into table (rowid, name, area, population, counselors, zip, parks, avg_age, founded, holiday) t2 (15, hays, 150.4, 190000, 5, 75125, 13, 43.12, 687943534562, null)";
-        String insert16 = "insert into table (rowid, name, area, population, counselors, zip, parks, avg_age, founded, holiday) t2 (16, glasscock, 150.4, 1300, 7, 75125, 87, 27.54, 687943535672, 1531618670000)";
-        String insert17 = "insert into table (rowid, name, area, population, counselors, zip, parks, avg_age, founded, holiday) t2 (17, wilbarger, 150.4, null, 4, 75126, 7, 29.21, 687943538762, 1531618670000)";
-        String insert18 = "insert into table (rowid, name, area, population, counselors, zip, parks, avg_age, founded, holiday) t2 (18, frio, 150.4, 19000, 7, 75127, 6, 33.12, null, 1531618670000)";
+        String insert1  = "insert into table (rowid, name, area, population, counselors, zip, parks, avg_age, founded, holiday) t2 (1, whatcom, 150.4, 21000, 7, 95211, 2, 43.21, 687943532123, 1531618670000)";
+        String insert2  = "insert into table (rowid, name, area, population, counselors, zip, parks, avg_age, founded, holiday) t2 (2, king, 345.6, 2987678, 8, 95212, null, 41.31, 687943532123, 1531618670000)";
+        String insert3  = "insert into table (rowid, name, area, population, counselors, zip, parks, avg_age, founded, holiday) t2 (3, pierce, 534.3, 5476, 8, 95213, 23, 36.90, 687943532123, 1531618670000)";
+        String insert4  = "insert into table (rowid, name, area, population, counselors, zip, parks, avg_age, founded, holiday) t2 (4, kittitas, 789.3, 10292, 7, 95214, 13, null, 687943532321, null)";
+        String insert5  = "insert into table (rowid, name, area, population, counselors, zip, parks, avg_age, founded, holiday) t2 (5, yakima, 150.4, 9972, 9, 95215, 98, 33.87, 687943533212, 1531618670000)";
+        String insert6  = "insert into table (rowid, name, area, population, counselors, zip, parks, avg_age, founded, holiday) t2 (6, skamania, 150.4, 1900000, 6, 95216, 4, 34.67, 687943531232, 1531618670000)";
+        String insert7  = "insert into table (rowid, name, area, population, counselors, zip, parks, avg_age, founded, holiday) t2 (7, thurston, 345.6, 910000, 7, 95217, 89, 37.80, 687943532312, 1531618670000)";
+        String insert8  = "insert into table (rowid, name, area, population, counselors, zip, parks, avg_age, founded, holiday) t2 (8, snohomish, 534.3, 2000000, 4, 95218, 43, 36.09, 687943532123, 1531618670000)";
+        String insert9  = "insert into table (rowid, name, area, population, counselors, zip, parks, avg_age, founded, holiday) t2 (9, clallam, 789.3, 510000, 3, 95219, 25, 31.95, null, 1531618670000)";
+        String insert10 = "insert into table (rowid, name, area, population, counselors, zip, parks, avg_age, founded, holiday) t2 (10, spokane, 150.4, 1200000, 7, 95220, 65, 29.17, 687943532123, 1531618670000)";
+        String insert11 = "insert into table (rowid, name, area, population, counselors, zip, parks, avg_age, founded, holiday) t2 (11, whitman, 150.4, 130000, 8, 95221, 2, 28.21, 687943532234, 1531618670000)";
+        String insert12 = "insert into table (rowid, name, area, population, counselors, zip, parks, avg_age, founded, holiday) t2 (12, kitsap, 345.6, 360000, 3, null, 20, 40.15, 687943532342, 1531618670000)";
+        String insert13 = "insert into table (rowid, name, area, population, counselors, zip, parks, avg_age, founded, holiday) t2 (13, cowlitz, 534.3, 3400, 7, 95223, 10, 44.99, 687943532345, 1531618670000)";
+        String insert14 = "insert into table (rowid, name, area, population, counselors, zip, parks, avg_age, founded, holiday) t2 (14, chelan, 789.3, 76000, 3, null, 17, 50.00, 687943536452, 1531618670000)";
+        String insert15 = "insert into table (rowid, name, area, population, counselors, zip, parks, avg_age, founded, holiday) t2 (15, klickitat, 150.4, 190000, 5, 95225, 13, 43.12, 687943534562, null)";
+        String insert16 = "insert into table (rowid, name, area, population, counselors, zip, parks, avg_age, founded, holiday) t2 (16, wahkiakum, 150.4, 1300, 7, 95225, 87, 27.54, 687943535672, 1531618670000)";
+        String insert17 = "insert into table (rowid, name, area, population, counselors, zip, parks, avg_age, founded, holiday) t2 (17, benton, 150.4, null, 4, 95226, 7, 29.21, 687943538762, 1531618670000)";
+        String insert18 = "insert into table (rowid, name, area, population, counselors, zip, parks, avg_age, founded, holiday) t2 (18, okanogan, 150.4, 19000, 7, 95227, 6, 33.12, null, 1531618670000)";
 
         String query = "select * from t2";
 

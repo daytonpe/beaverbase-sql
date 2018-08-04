@@ -1,4 +1,4 @@
-is# BeaverBaseSQL -- SQL ENGINE
+# BeaverBaseSQL -- SQL ENGINE
 
 ## Overview
 The goal of this project is to implement a (very) rudimentary database engine that is loosely based on a hybrid between MySQL and SQLite. Your implementation should operate entirely from the command line and API calls (no GUI).
@@ -93,7 +93,7 @@ FOREIGN KEY constraint are not supported, since multi-table queries (i.e. Joins)
 Replace the “Serial Type Codes Of The Record Format” table in SQLite document with the following table. The VARINT data type is not supported. Note that there are different sizes of NULL values in BeaverBase. This is to accommodate updating the field to a non-NULL value without increasing the size of the cell payload.
 
 | Serial TypeCode | Database Data Type Name | Content Size (bytes) | Description
-| :------------- | :------------- |
+| :------------- | :-------------: |:-------------: | -------------: |
 |0x00|NULL|2|Value is a 1-byte NULL (used for NULL TINYINT)|
 |0x01|NULL|2|Value is a 2-byte NULL (used for NULL SMALLINT)|
 |0x02|NULL|4|Value is a 4-byte NULL (used for NULL INT or REAL)|

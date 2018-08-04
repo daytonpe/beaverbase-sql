@@ -1,15 +1,13 @@
 # BEAVERBASE -- SQL ENGINE
 
-********************
+### Setup
 
-TO RUN...
-
-$cd beaverbase
+```$cd beaverbase
 $javac BeaverBase.java
 $cd ..
-$java -cp . beaverbase.BeaverBase
+$java -cp . beaverbase.BeaverBase```
 
-********************
+---
 
 SEED DATA
 

@@ -1,4 +1,4 @@
-# BeaverBaseSQL -- SQL ENGINE
+is# BeaverBaseSQL -- SQL ENGINE
 
 ## Overview
 The goal of this project is to implement a (very) rudimentary database engine that is loosely based on a hybrid between MySQL and SQLite. Your implementation should operate entirely from the command line and API calls (no GUI).
@@ -37,7 +37,7 @@ Creates a table representing data of Texas/Washington counties and inserts examp
 
 ---
 
-## Supported DDL and DML commands
+## Supported DDL and DML Commands
 
 ```
 SHOW TABLES; // Displays a list of all TABLES
@@ -55,18 +55,58 @@ UPDATE _tableName_ SET _columnName_ = _value_ [WHERE condition]; // Modifies one
 EXIT; // Cleanly exits the program and saves all table information in non-volatile files to disk.
 ```
 
+---
+
 ## Querying
 
-BeaverBaseSQL supports SELECT-FROM-WHERE” style queries.
+BeaverBaseSQL supports SELECT-FROM-WHERE” style queries. For example
 
 ```
-
+SELECT rowid, name, population FROM wa_counties WHERE counselors != 7;
 ```
 
-## Extra Features Implemented
+All constraint based commands can use any logical operator (<, <=, =, !=, >, >=)
 
-- Delete was implemented
-- All constraint based commands can use any logical operator (<, <=, =, !=, >, >=)
+---
+
+## Create Table
+
+Create a table schema
+
+```
+CREATE TABLE _tableName_ (
+_row_id_ INT PRIMARY KEY, _columnName2_ _dataType2_ [NOT NULL], _columnName3_ _dataType3_ [NOT NULL], ...
+);
+```
+
+Create the table schema information for a new table. In other words, add appropriate entries to the system beaverbase_tables and beaverbase_columns tables that define the described CREATE TABLE and create the associated .tbl data file.
+
+Note that unlike the official SQL specification, a BeaverBase table PRIMARY KEY must be (a) a single column, (b) the first column listed in the CREATE statement, (c) named row_id, and (d) an INT data type. This requirement greatly simplifies the implementation. In most commercial databases a unique key, which is an INT data type, is automatically created in the background if you do not explicitly create the PRIMARY KEY as a single column INT. In commercial databases this “default” key is usually called the rowid or row_id. In the BeaverBase implementation, the row_id is explicit and required.
+
+If a column is a primary key, its beaverbase_columns.COLUMN_KEY attribute is “PRI”, otherwise, it is NULL. If a column is defined as NOT NULL, then its beaverbase_columns.IS_NULLABLE attribute is “NO”, otherwise, it is “YES”.
+
+FOREIGN KEY constraint are not supported, since multi-table queries (i.e. Joins) are not supported in BeaverBase.
+
+---
+## Data Types Supported
+
+Replace the “Serial Type Codes Of The Record Format” table in SQLite document with the following table. The VARINT data type is not supported. Note that there are different sizes of NULL values in BeaverBase. This is to accommodate updating the field to a non-NULL value without increasing the size of the cell payload.
+
+| Serial TypeCode | Database Data Type Name | Content Size (bytes) | Description
+| :------------- | :------------- |
+|0x00|NULL|2|Value is a 1-byte NULL (used for NULL TINYINT)|
+|0x01|NULL|2|Value is a 2-byte NULL (used for NULL SMALLINT)|
+|0x02|NULL|4|Value is a 4-byte NULL (used for NULL INT or REAL)|
+|0x03|NULL|8|Value is a 8-byte NULL (used for NULL DOUBLE, DATETIME, or DATE|
+|0x04|TINYINT|1|Value is a big-endian 1-byte twos-complement integer.|
+|0x05|SMALLINT|2|Value is a big-endian 2-byte twos-complement integer.|
+|0x06|INT|4|Value is a big-endian 4-byte twos-complement integer.|
+|0x07|BIGINT|8|Value is an big-endian 8-byte twos-complement integer.|
+|0x08|REAL|4|A big-endian single precision IEEE 754 floating point number|
+|0x09|DOUBLE|8|A big-endian double precision IEEE 754 floating point number|
+|0x0A|DATETIME|8|A big-endian unsigned LONG integer that represents the specified number of milliseconds since the standard base time known as "the epoch”. It should display as a formatted string string:  YYYY-MM-DD_hh:mm:ss, e.g. 2016-03-23_13:52:23.|
+|0x0B|DATE|8|A datetime whose time component is 00:00:00, but does not display.|
+|0x0C + n|TEXT|Value is a string in ASCI encoding (range 0x00-0x7F) of length n. For the purposes of this database you may consider that the empty string is a NULL value, i.e. empty strings do not exist. The null terminator is not stored.|
 
 ---
 

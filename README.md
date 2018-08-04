@@ -106,7 +106,7 @@ Replace the “Serial Type Codes Of The Record Format” table in SQLite documen
 |0x09|DOUBLE|8|A big-endian double precision IEEE 754 floating point number|
 |0x0A|DATETIME|8|A big-endian unsigned LONG integer that represents the specified number of milliseconds since the standard base time known as "the epoch”. It should display as a formatted string string:  YYYY-MM-DD_hh:mm:ss, e.g. 2016-03-23_13:52:23.|
 |0x0B|DATE|8|A datetime whose time component is 00:00:00, but does not display.|
-|0x0C + n|TEXT|Value is a string in ASCI encoding (range 0x00-0x7F) of length n. For the purposes of this database you may consider that the empty string is a NULL value, i.e. empty strings do not exist. The null terminator is not stored.|
+|0x0C + n|TEXT||Value is a string in ASCI encoding (range 0x00-0x7F) of length n. For the purposes of this database you may consider that the empty string is a NULL value, i.e. empty strings do not exist. The null terminator is not stored.|
 
 ---
 

@@ -2,10 +2,12 @@
 
 ### Setup
 
-```$cd beaverbase
+```
+$cd beaverbase
 $javac BeaverBase.java
 $cd ..
-$java -cp . beaverbase.BeaverBase```
+$java -cp . beaverbase.BeaverBase
+```
 
 ---
 

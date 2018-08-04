@@ -1,9 +1,4 @@
-Pat Dayton
-UTD CS6360 -- Davis
-Project 2
-Due: 20 April 2018
-
-BEAVERBASE -- SQL ENGINE
+# BEAVERBASE -- SQL ENGINE
 
 ********************
 
@@ -154,7 +149,7 @@ Page Header
 Table 1 below replaces the “B-tree Pages Header Format” in SQLite File Format document §1.5. All DavisBase table pages have an 8-byte page header, immediately followed by a sequence of 2-byte integers that are the page offset location for each data cell.
 
 Offset from beginning of page
-Content Size   (bytes)
+Content Size  (bytes)
 Description
 0x00
 1
@@ -203,7 +198,7 @@ Replace the “Serial Type Codes Of The Record Format” table in SQLite documen
 
 Serial TypeCode
 Database Data Type Name
-Content Size   (bytes)
+Content Size  (bytes)
 Description
 0x00
 NULL
@@ -248,7 +243,7 @@ A big-endian double precision IEEE 754 floating point number
 0x0A
 DATETIME
 8
-A big-endian unsigned LONG integer that represents the specified number of milliseconds since the standard base time known as "the epoch”. It should display as a formatted string string:   YYYY-MM-DD_hh:mm:ss, e.g. 2016-03-23_13:52:23.
+A big-endian unsigned LONG integer that represents the specified number of milliseconds since the standard base time known as "the epoch”. It should display as a formatted string string:  YYYY-MM-DD_hh:mm:ss, e.g. 2016-03-23_13:52:23.
 0x0B
 DATE
 8
@@ -265,7 +260,7 @@ CREATE davisbase_tables ( 
 rowid INT, 
 table_name TEXT, 
 record_count INT, -- optional field, may help your implementation  avg_length SMALLINT -- optional field, may help your implementation root_page SMALLINT -- optional field, may help your implementation 
-);   
+);  
 CREATE davisbase_columns ( 
   rowid
 table_name
@@ -277,7 +272,7 @@ If you choose to include these two tables in the catalog itself, their content w
  
 SELECT * FROM davisbase_tables; 
 rowid table_name -------------------------- 1 davisbase_tables
-2 davisbase_columns  
+2 davisbase_columns 
  
 SELECT * FROM davisbase_columns; 
 rowid table_name column_name data_type ordinal_position is_nullable ---------------------------------------------------------------------------------- 1 davisbase_tables rowid INT 1 NO
